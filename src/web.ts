@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /*import { WebPlugin } from '@capacitor/core';
 import { Own2MeshOkLokPluginPlugin } from './definitions';
 
@@ -37,3 +38,5 @@ export { Own2MeshOkLokPlugin };
 import { registerWebPlugin } from '@capacitor/core';
 registerWebPlugin(Own2MeshOkLokPlugin);
 */
+=======
+>>>>>>> 5d4bf44791202e6e1e9d9932cb810780254ef469
