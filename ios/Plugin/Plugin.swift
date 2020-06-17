@@ -26,11 +26,13 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     private var secret: String = ""
     private var pw: String = ""
     
+    private var consoleLog: String = ""
     
     @objc func echo(_ call: CAPPluginCall) {
         let value = call.getString("value") ?? ""
+        self.consoleLog = self.consoleLog + value
         call.success([
-            "value": value
+            "value": consoleLog
         ])
     }
     
@@ -53,6 +55,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
         }
         self.pw = pwCheck
         
+        self.iniCB()
         
         call.success([
             "opened": true
@@ -78,10 +81,13 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     // It will fire when an app first starts so you know the state of Bluetooth. We also start scanning here.
     public func centralManagerDidUpdateState(_ central: CBCentralManager) {
         print("Central state update")
+        self.consoleLog = self.consoleLog + "Central state update"
         if central.state != .poweredOn {
             print("Central is not powered on")
+            self.consoleLog = self.consoleLog + "Central is not powered on"
         } else {
             print("Central scanning for", self.address);
+            self.consoleLog = self.consoleLog + "Central scanning for" + self.address
             centralManager.scanForPeripherals(withServices: nil, options: nil)
         }
     }
@@ -90,12 +96,13 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     // Handles the result of the scan
     // The centralManager didDiscover event occurs when you receive scan results. We'll use this to start a connection.
     public func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        
         print("\n\n__advertisementData: ")
         print(advertisementData);
+        self.consoleLog = self.consoleLog + ("\n\n__advertisementData: ")
         
         self.peripheralName = peripheral.name ?? ""
         print("\n\n__peripheralName: " + self.peripheralName)
+        self.consoleLog = self.consoleLog + ("\n\n__peripheralName: " + self.peripheralName)
         
         if (self.peripheralName).isEmpty {
             if (self.peripheralName == self.address) {
@@ -110,6 +117,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
                 self.centralManager.connect(self.peripheral, options: nil)
             } else {
                 print("Adress: " + self.address + " does not match with peripheralName: " + self.peripheralName)
+                self.consoleLog = self.consoleLog + ("Adress: " + self.address + " does not match with peripheralName: " + self.peripheralName)
             }
         }
 
@@ -122,6 +130,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         if peripheral == self.peripheral {
             print("Connected to your Particle Board")
+            self.consoleLog = self.consoleLog + ("Connected to your Particle Board")
             peripheral.discoverServices(nil)
         }
     }
@@ -138,7 +147,8 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
       if let services = peripheral.services {
           for service in services {
             if service.uuid == CBUUID.init(string: UUID_LOCK){
-                  print("LOCK service found")
+                print("LOCK service found")
+                self.consoleLog = self.consoleLog + ("LOCK service found")
                   //Now kick off discovery of characteristics
                   peripheral.discoverCharacteristics(nil, for: service)
                   return
@@ -156,6 +166,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
                 
                 if (characteristic.uuid == CBUUID.init(string: UUID_LOCK_DATA)) {
                     print("Lock read characteristic found")
+                    self.consoleLog = self.consoleLog + ("Lock read characteristic found")
                     self.peripheral .setNotifyValue(true, for: characteristic)
                     
                     self.readCharacteristic = characteristic
@@ -163,6 +174,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
                 
                 if (characteristic.uuid == CBUUID.init(string: UUID_LOCK_CONFIG)) {
                     print("Lock write characteristic found")
+                    self.consoleLog = self.consoleLog + ("Lock write characteristic found")
                     self.writeCharacteristic = characteristic
                 }
                 
@@ -177,9 +189,11 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         if ((error) != nil) {
             print("Error changing notification state: ", error?.localizedDescription ?? "Non detected");
+            self.consoleLog = self.consoleLog + ("Error changing notification state: " + error!.localizedDescription);
         } else {
             let dataBytes: Data? = characteristic.value
             print("__dataBytes" + (dataBytes?.base64EncodedString())!)
+            self.consoleLog = self.consoleLog + ("__dataBytes" + (dataBytes?.base64EncodedString())!)
             
             if ((characteristic.uuid == CBUUID.init(string: UUID_LOCK_DATA)) ||
                 (characteristic.uuid == CBUUID.init(string: UUID_LOCK_CONFIG))) {
@@ -187,6 +201,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
                 let de_data = dataBytes?.base64EncodedString().aesDecrypt(key: secret, iv: self.pw)
                 
                 print("__AESDecrypt de_data: " + (de_data)!)
+                self.consoleLog = self.consoleLog + ("__AESDecrypt de_data: " + (de_data)!)
                 
 //                let length: Int = de_data?.count
 //                let index: Int
