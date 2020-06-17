@@ -1,6 +1,6 @@
-declare global {
+declare module "@capacitor/core" {
     interface PluginRegistry {
-        Own2MeshOkLokPlugin?: Own2MeshOkLokPluginPlugin;
+        Own2MeshOkLokPlugin: Own2MeshOkLokPluginPlugin;
     }
 }
 export interface Own2MeshOkLokPluginPlugin {

@@ -17,10 +17,10 @@
     "@capacitor/core": "^2.2.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^2.2.0",
+    "@capacitor/ios": "^2.2.0",
     "rimraf": "^3.0.0",
-    "typescript": "^3.2.4",
-    "@capacitor/ios": "latest",
-    "@capacitor/android": "latest"
+    "typescript": "^3.2.4"
   },
   "files": [
     "dist/",

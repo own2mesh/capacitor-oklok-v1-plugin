@@ -6,7 +6,7 @@ declare global {
 
 export interface Own2MeshOkLokPluginPlugin {
   echo(options: { value: string }): Promise<{value: string}>;
-
+  
   open(options: { address: string, secret: string, pw: string }): Promise<{ opened: boolean }>;
   close(options: { address: string, secret: string }): Promise<{ closed: boolean }>;
   battery_status(options: { address: string, secret: string }): Promise<{ percentage: number }>;
