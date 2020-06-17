@@ -1,6 +1,6 @@
 {
   "name": "own2mesh-capacitor-plugin-oklok",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "An awesome plugin!",
   "main": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
@@ -13,7 +13,8 @@
   "author": "own2mesh",
   "license": "MIT",
   "dependencies": {
-    "@capacitor/core": "latest"
+    "@capacitor/cli": "^2.2.0",
+    "@capacitor/core": "^2.2.0"
   },
   "devDependencies": {
     "rimraf": "^3.0.0",
@@ -43,8 +44,5 @@
   "repository": {
     "type": "git",
     "url": "www.github.com"
-  },
-  "bugs": {
-    "url": "www.github.com/issues"
   }
 }
