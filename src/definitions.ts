@@ -6,10 +6,10 @@ declare global {
 
 export interface Own2MeshOkLokPluginPlugin {
   echo(options: { value: string }): Promise<{value: string}>;
-  
-  open(options: { id: string, secret: string, pw: string }): Promise<{ opened: boolean }>;
-  close(options: { id: string, secret: string }): Promise<{ closed: boolean }>;
-  battery_status(options: { id: string, secret: string }): Promise<{ percentage: number }>;
-  lock_status(options: { id: string, secret: string }): Promise<{ locked: boolean }>;
+
+  open(options: { address: string, secret: string, pw: string }): Promise<{ opened: boolean }>;
+  close(options: { address: string, secret: string }): Promise<{ closed: boolean }>;
+  battery_status(options: { address: string, secret: string }): Promise<{ percentage: number }>;
+  lock_status(options: { address: string, secret: string }): Promise<{ locked: boolean }>;
 }
 
