@@ -1,9 +1,9 @@
-declare module "@capacitor/core" {
+declare module '@capacitor/core' {
     interface PluginRegistry {
-        Own2MeshOkLokPlugin: Own2MeshOkLokPluginPlugin;
+        Own2MeshOkLokPlugin?: Own2MeshOkLokPlugin;
     }
 }
-export interface Own2MeshOkLokPluginPlugin {
+export interface Own2MeshOkLokPlugin {
     echo(options: {
         value: string;
     }): Promise<{

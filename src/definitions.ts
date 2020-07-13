@@ -1,4 +1,5 @@
-declare global {
+// @ts-ignore
+declare module '@capacitor/core'{
   interface PluginRegistry {
     Own2MeshOkLokPlugin?: Own2MeshOkLokPlugin;
   }
