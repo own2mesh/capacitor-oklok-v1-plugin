@@ -1,6 +1,6 @@
 {
   "name": "own2mesh-capacitor-plugin-oklok",
-  "version": "0.0.3",
+  "version": "0.0.7",
   "description": "An awesome plugin!",
   "main": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
@@ -19,7 +19,7 @@
   "devDependencies": {
     "@capacitor/android": "^2.2.0",
     "@capacitor/ios": "^2.2.0",
-    "rimraf": "^3.0.0",
+    "rimraf": "^3.0.2",
     "typescript": "^3.2.4"
   },
   "files": [
