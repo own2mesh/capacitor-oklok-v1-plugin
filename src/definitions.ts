@@ -1,10 +1,10 @@
 declare global {
   interface PluginRegistry {
-    Own2MeshOkLokPlugin?: Own2MeshOkLokPluginPlugin;
+    Own2MeshOkLokPlugin?: Own2MeshOkLokPlugin;
   }
 }
 
-export interface Own2MeshOkLokPluginPlugin {
+export interface Own2MeshOkLokPlugin {
   echo(options: { value: string }): Promise<{value: string}>;
   open(options: { id: string, secret: string, pw: string }): Promise<{ opened: boolean }>;
   close(options: { id: string, secret: string }): Promise<{ closed: boolean }>;

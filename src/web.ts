@@ -1,8 +1,8 @@
 <<<<<<< HEAD
 /*import { WebPlugin } from '@capacitor/core';
-import { Own2MeshOkLokPluginPlugin } from './definitions';
+import { Own2MeshOkLokPlugin } from './definitions';
 
-export class Own2MeshOkLokPluginWeb extends WebPlugin implements Own2MeshOkLokPluginPlugin {
+export class Own2MeshOkLokPluginWeb extends WebPlugin implements Own2MeshOkLokPlugin {
   constructor() {
     super({
       name: 'Own2MeshOkLokPlugin',
