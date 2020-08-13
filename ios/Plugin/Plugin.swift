@@ -3,7 +3,7 @@ import Capacitor
 import CoreBluetooth
 import CommonCrypto
 
-let UUID_LOCK = "FEE7"
+let UUID_LOCK_SERVICE = "FEE7"
 let UUID_LOCK_DATA = "36F6" // read (notify) update wenn sich was ändert
 let UUID_LOCK_CONFIG = "36F5" // write
 
@@ -14,6 +14,8 @@ let UUID_LOCK_CONFIG = "36F5" // write
 @objc(Own2MeshOkLokPlugin)
 public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralManagerDelegate {
     
+    private var call: CAPPluginCall!
+    
     // Properties, private variables to store the actual central manager and peripheral
     private var centralManager: CBCentralManager!
     private var peripheral: CBPeripheral!
@@ -22,18 +24,23 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     
     private var peripheralName: String = ""
     
-    private var address: String = ""
-    private var secret: String = ""
-    private var pw: String = ""
+    var arrayPeripheral: [CBPeripheral] = []
+    var arrayPeripheralStringName:[String] = []
     
-    private var consoleLog: String = ""
+    private var address: String = "" // Bluetooth name of lock
+    private var secretData: Data! // Secret key vor de/encryption
+    
+    private var pw: [UInt8] = [] // specific password for lock
+    
+    private var token: [UInt8]  = [0x00, 0x00, 0x00, 0x00]
+    
     
     @objc func echo(_ call: CAPPluginCall) {
-        let value = call.getString("value") ?? ""
-        self.consoleLog = self.consoleLog + value
-        call.success([
-            "value": consoleLog
-        ])
+//        let value = call.getString("value") ?? ""
+//        self.consoleLog = self.consoleLog + value
+//        call.success([
+//            "value": consoleLog
+//        ])
     }
     
     @objc func open(_ call: CAPPluginCall) {
@@ -43,13 +50,13 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
         }
         self.address = addressCheck
         
-        guard let secretCheck = call.options["secret"] as? String else {
+        guard let secretCheck = call.options["secret"] as? [UInt8] else {
           call.reject("Must provide an secret")
           return
         }
-        self.secret = secretCheck
+        self.secretData = Data(bytes: secretCheck, count: secretCheck.count)
         
-        guard let pwCheck = call.options["pw"] as? String else {
+        guard let pwCheck = call.options["pw"] as? [UInt8] else {
           call.reject("Must provide an password (pw)")
           return
         }
@@ -57,9 +64,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
         
         self.iniCB()
         
-        call.success([
-            "opened": true
-        ])
+        self.call = call
         
         
     }
@@ -80,14 +85,10 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     // centralManagerDidUpdateState updates when the Bluetooth Peripheral is switched on or off.
     // It will fire when an app first starts so you know the state of Bluetooth. We also start scanning here.
     public func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        print("Central state update")
-        self.consoleLog = self.consoleLog + "Central state update"
         if central.state != .poweredOn {
-            print("Central is not powered on")
-            self.consoleLog = self.consoleLog + "Central is not powered on"
+            self.call.reject("Bluetooth is not powered on")
         } else {
-            print("Central scanning for", self.address);
-            self.consoleLog = self.consoleLog + "Central scanning for" + self.address
+            print("Scanning for", self.address);
             centralManager.scanForPeripherals(withServices: nil, options: nil)
         }
     }
@@ -96,16 +97,25 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     // Handles the result of the scan
     // The centralManager didDiscover event occurs when you receive scan results. We'll use this to start a connection.
     public func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        print("\n\n__advertisementData: ")
-        print(advertisementData);
-        self.consoleLog = self.consoleLog + ("\n\n__advertisementData: ")
         
-        self.peripheralName = peripheral.name ?? ""
-        print("\n\n__peripheralName: " + self.peripheralName)
-        self.consoleLog = self.consoleLog + ("\n\n__peripheralName: " + self.peripheralName)
+        // LOGS
+//        print("\n\n__advertisementData: ")
+//        print(advertisementData);
+        // LOGS END
         
-        if (self.peripheralName).isEmpty {
+        // Add deiscovered peripheral name to global variable "peripheralName"
+        if (((advertisementData as NSDictionary).value(forKey: "kCBAdvDataLocalName")) != nil){
+            self.peripheralName = peripheral.name ?? ""
+//            print("\n\n__peripheralName: ", self.peripheralName) // LOGS
+        }
+                
+        // Check if discovered peripheralName matches the given address
+        if (!(self.peripheralName).isEmpty) {
             if (self.peripheralName == self.address) {
+                // LOGS
+//                print("####################################################\nAdress: " + self.address + " match with peripheralName: " + self.peripheralName + "\n####################################################\n")
+                // LOGS END
+                
                 // We've found it so stop scan
                 self.centralManager.stopScan()
 
@@ -115,12 +125,8 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 
                 // Connect!
                 self.centralManager.connect(self.peripheral, options: nil)
-            } else {
-                print("Adress: " + self.address + " does not match with peripheralName: " + self.peripheralName)
-                self.consoleLog = self.consoleLog + ("Adress: " + self.address + " does not match with peripheralName: " + self.peripheralName)
             }
         }
-
     }
     
     // The handler if we do connect succesfully
@@ -129,198 +135,322 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     // This is a good way to confirm what type of device we're connected to.
     public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         if peripheral == self.peripheral {
-            print("Connected to your Particle Board")
-            self.consoleLog = self.consoleLog + ("Connected to your Particle Board")
+//            print("Connected to Bluetooth Lock " + self.address) // LOG
             peripheral.discoverServices(nil)
         }
-    }
-    
-    // Disconnected
-    public func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        // TODO:
     }
     
     // Handles discovery event
     // The peripheral didDiscoverServices event first once all the services have been discovered.
     // Notice that we've switched from centralManager to peripheral now that we're connected. We'll start the characteristic discovery here. We'll be using the service UUID as the target.
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
-      if let services = peripheral.services {
-          for service in services {
-            if service.uuid == CBUUID.init(string: UUID_LOCK){
-                print("LOCK service found")
-                self.consoleLog = self.consoleLog + ("LOCK service found")
-                  //Now kick off discovery of characteristics
-                  peripheral.discoverCharacteristics(nil, for: service)
-                  return
-              }
-          }
-      }
+        if ((error) != nil) {
+            self.call.reject("Error discovering services: \(error!.localizedDescription)")
+            return
+        }
+        
+        guard let services = peripheral.services else {
+            self.call.reject("No service discovered!")
+            return
+        }
+        
+        for service in services {
+            if service.uuid == CBUUID.init(string: UUID_LOCK_SERVICE){
+                // Lock service found
+                // Now kick off discovery of characteristics
+                peripheral.discoverCharacteristics(nil, for: service)
+//                print("Discovered Services: \(services)") // LOG
+                return
+            }
+        }
+        
     }
     
     // Handling discovery of characteristics
     // The peripheral didDiscoverCharacteristicsFor event will provide all the characteristics using the provided service UUID.
     // This is the last step in the chain of doing a full device discovery. It's hairy but it only has to be done once during the connection phase!
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
-        if let characteristics = service.characteristics {
-            for characteristic in characteristics {
+        if ((error) != nil) {
+            self.call.reject("Error discovering services: \(error!.localizedDescription)")
+            return
+        }
+        
+        guard let characteristics = service.characteristics else {
+            return
+        }
+        
+        for characteristic in characteristics {
+            //looks for the right characteristic
+
+            // Read Characteristic ?
+            if (characteristic.uuid == CBUUID.init(string: UUID_LOCK_DATA)) {
+                //Once found, subscribe to the this particular characteristic...
+                self.peripheral.setNotifyValue(true, for: characteristic)
+                self.readCharacteristic = characteristic
                 
-                if (characteristic.uuid == CBUUID.init(string: UUID_LOCK_DATA)) {
-                    print("Lock read characteristic found")
-                    self.consoleLog = self.consoleLog + ("Lock read characteristic found")
-                    self.peripheral .setNotifyValue(true, for: characteristic)
+//                print("Read Characteristic: \(characteristic.uuid)\n") // LOG
+            }
+            
+            // Write Characteristic ?
+            if (characteristic.uuid == CBUUID.init(string: UUID_LOCK_CONFIG)) {
+                self.writeCharacteristic = characteristic
+                
+//                print("Write Characteristic: \(characteristic.uuid)\n") // LOG
+            }
+            
+            // Discover descriptors for each characteristic
+//            peripheral.discoverDescriptors(for: characteristic) // IS missing and throws error
+
+            // Discovered Read / Write Characteristic?
+            if ((self.readCharacteristic != nil) && (self.writeCharacteristic != nil))
+            {
+                // Send token requst
+                let valData: [UInt8] = [0x06, 0x01, 0x01, 0x01, 0x37, 0x62, 0x55, 0x6c, 0x68, 0x73, 0x1d, 0x6d, 0x7e, 0x17, 0x3b, 0x4d] // BLE Communication-v1.pdf, Page 4
+                let data: Data = Data(bytes: valData, count: valData.count)
+
+                var encryptedData :Data?
+                do {
+                    encryptedData = try aesCBCEncrypt(data: data, keyData: self.secretData) // Do encryption
+//                    print("cryptData:   \(encryptedData! as NSData)") (( LOG))
                     
-                    self.readCharacteristic = characteristic
+                    self.peripheral.writeValue(encryptedData!, for: self.writeCharacteristic, type: .withoutResponse)
                 }
-                
-                if (characteristic.uuid == CBUUID.init(string: UUID_LOCK_CONFIG)) {
-                    print("Lock write characteristic found")
-                    self.consoleLog = self.consoleLog + ("Lock write characteristic found")
-                    self.writeCharacteristic = characteristic
-                }
-                
-                if ((self.readCharacteristic != nil) && (self.writeCharacteristic != nil))
-                {
-                   // TODO: get Token
+                catch (let status) {
+                    self.call.reject("Error aesCBCEncrypt: \(status)")
                 }
             }
+        }
+    }
+
+    public func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
+        if ((error) != nil) {
+            self.call.reject("Error update notification state for characteristic: \(error!.localizedDescription)")
+            return
         }
     }
     
     public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         if ((error) != nil) {
-            print("Error changing notification state: ", error?.localizedDescription ?? "Non detected");
-            self.consoleLog = self.consoleLog + ("Error changing notification state: " + error!.localizedDescription);
+            self.call.reject("Error update value for characteristic: \(error!.localizedDescription)")
+            return
         } else {
-            let dataBytes: Data? = characteristic.value
-            print("__dataBytes" + (dataBytes?.base64EncodedString())!)
-            self.consoleLog = self.consoleLog + ("__dataBytes" + (dataBytes?.base64EncodedString())!)
+            // LOG
+//            print("Update value for characteristic:\n", characteristic)
+//            print("--------------------------------------------")
+//            print("Characteristic UUID: \(characteristic.uuid)")
+//            print("Characteristic isNotifying: \(characteristic.isNotifying)")
+//            print("Characteristic properties: \(characteristic.properties)")
+//            print("Characteristic descriptors: \(characteristic.descriptors)")
+//            print("Characteristic value: \(characteristic.value)")
+//            print("--------------------------------------------")
+            // LOG END
             
             if ((characteristic.uuid == CBUUID.init(string: UUID_LOCK_DATA)) ||
                 (characteristic.uuid == CBUUID.init(string: UUID_LOCK_CONFIG))) {
-                
-                let de_data = dataBytes?.base64EncodedString().aesDecrypt(key: secret, iv: self.pw)
-                
-                print("__AESDecrypt de_data: " + (de_data)!)
-                self.consoleLog = self.consoleLog + ("__AESDecrypt de_data: " + (de_data)!)
-                
-//                let length: Int = de_data?.count
-//                let index: Int
-                
-                //TODO
+        
+                let data: NSData = characteristic.value! as NSData // Communication frames returned after token request
+                let dataBytes: Data = Data(referencing: data) // aesCBCDecrypt needs type Data. But secret need to be stored as NSData, so referencing works just fine..
+        
+                var decryptedData :Data?
+                do {
+                    decryptedData = try aesCBCDecrypt(data: dataBytes, keyData: self.secretData) // Do decryption
+                    
+                    let fileBytes = [UInt8](decryptedData!) // Convert recieved data into UInt8 to get specific bytes
+                    
+                    // Check for correct fix􏰓ed token identifier (0x06 & 0x02) // BLE Communication-v1.pdf, Page 4
+                    if (fileBytes[0] == 0x06)
+                    {
+                        if (fileBytes[1] == 0x02)
+                        {
+                            token[0] = fileBytes[3]
+                            token[1] = fileBytes[4]
+                            token[2] = fileBytes[5]
+                            token[3] = fileBytes[6]
+                            
+                            // Send unlock request
+                            let passwordData: [UInt8] = [0x05, 0x01, 0x06, self.pw[0], self.pw[1], self.pw[2], self.pw[3], self.pw[4], self.pw[5], token[0], token[1], token[2], token[3], 0x17, 0x3b, 0x4d] // BLE Communication-v1.pdf, Page 8
+                            let unlockData: Data = Data(bytes: passwordData, count: passwordData.count)
+
+                            var encryptedData :Data?
+                            do {
+                                encryptedData = try aesCBCEncrypt(data: unlockData, keyData: self.secretData)
+                                self.peripheral.writeValue(encryptedData!, for: self.writeCharacteristic, type: .withoutResponse)
+                                self.call.success([
+                                    "opened": true
+                                ])
+                            }
+                            catch (let status) {
+                               self.call.reject("Error aesCBCEncrypt: \(status)")
+                            }
+                        }
+                    }
+                    else
+                    {
+                        self.disconnectFromDevice();
+                    }
+        
+                }
+                catch (let status) {
+                   self.call.reject("Error aesCBCDecrypt: \(status)")
+                }
             }
         }
     }
+    
+    // Disconnect
+    public func disconnectFromDevice () {
+        if self.peripheral != nil {
+            centralManager?.cancelPeripheralConnection(self.peripheral!)
+            print("Disconnected")
+        }
+    }
+    
+    // Disconnected
+    public func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
+        self.peripheral = nil;
+        self.readCharacteristic = nil;
+        self.writeCharacteristic = nil;
+        
+        self.peripheralName = ""
+        
+        self.arrayPeripheral = []
+        self.arrayPeripheralStringName = []
+        
+        self.address = ""
+        self.secretData = nil
+           
+        self.pw = []
+           
+        self.token = [0x00, 0x00, 0x00, 0x00]
+    }
+    
     
     
     
     /*
      AES Stuff
-     
-     https://stackoverflow.com/questions/27072021/aes-encrypt-and-decrypt
-     
-     let key = "bbC2H19lkVbQDfakxcrtNMQdd0FloLyw" // length == 32
-     let iv = "gqLOHUioQ0QjhuvI" // length == 16
-     let s = "string to encrypt"
-     let enc = try! s.aesEncrypt(key, iv: iv)
-     let dec = try! enc.aesDecrypt(key, iv: iv)
-     print(s) // string to encrypt
-     print("enc:\(enc)") // 2r0+KirTTegQfF4wI8rws0LuV8h82rHyyYz7xBpXIpM=
-     print("dec:\(dec)") // string to encrypt
-     print("\(s == dec)") // true
+     https://stackoverflow.com/questions/37680361/aes-encryption-in-swift
      */
     
-     // The IV must be the same of block size, a constant defined in the code, which is 16B. That means your IV must be exactly 16 bytes/characters long.
-     // The key must be exactly 128, 192 or 256 bits long (16, 24 or 32 bytes/characters).
-//    func aesEncrypt(KEY: String, IV: String) throws -> String {
-//        let encrypted = try AES(key: KEY, iv: IV, padding: .pkcs7).encrypt([UInt8](self.data(using: .utf8)!))
-//        return Data(encrypted).base64EncodedString()
-//    }
-//
-//    func aesDecrypt(KEY: String, IV: String) throws -> String {
-//        guard let data = Data(base64Encoded: self) else { return "" }
-//        let decrypted = try AES(key: KEY, iv: IV, padding: .pkcs7).decrypt([UInt8](data))
-//        return String(bytes: decrypted, encoding: .utf8) ?? self
-//    }
-}
+     enum AESError: Error {
+         case KeyError((String, Int))
+         case IVError((String, Int))
+         case CryptorError((String, Int))
+     }
 
-/*
-AES Stuff
- let encoded = message.aesEncrypt(key: keyString, iv: iv)
- let unencode = encoded?.aesDecrypt(key: keyString, iv: iv)
-https://stackoverflow.com/questions/27072021/aes-encrypt-and-decrypt
- */
-extension String {
+     // The iv is prefixed to the encrypted data
+    func aesCBCEncrypt(data:Data, keyData:Data) throws -> Data {
+        let keyLength = keyData.count
+                
+         let validKeyLengths = [kCCKeySizeAES128, kCCKeySizeAES192, kCCKeySizeAES256]
+         if (validKeyLengths.contains(keyLength) == false) {
+            self.call.reject("Invalid key length.\nYour key length \(keyLength).\nSchould be \(kCCKeySizeAES128), \(kCCKeySizeAES192), \(kCCKeySizeAES256)")
+         }
 
-    func aesEncrypt(key:String, iv:String, options:Int = kCCOptionPKCS7Padding) -> String? {
-        if let keyData = key.data(using: String.Encoding.utf8),
-            let data = self.data(using: String.Encoding.utf8),
-            let cryptData    = NSMutableData(length: Int((data.count)) + kCCBlockSizeAES128) {
+        let dataLength = data.count;
+        let bufferSize = dataLength + kCCBlockSizeAES128;
+        let encryptDataPointer = UnsafeMutableRawPointer.allocate(byteCount: bufferSize, alignment: 1)
+        
+        // Seems like the easiest way to avoid the `withUnsafeBytes` mess is to use NSData.bytes.
+        let dataToDecryptNSData = NSData(data: data)
+        let keyToDecryptNSData = NSData(data: keyData)
 
-
-            let keyLength              = size_t(kCCKeySizeAES128)
-            let operation: CCOperation = UInt32(kCCEncrypt)
-            let algoritm:  CCAlgorithm = UInt32(kCCAlgorithmAES128)
-            let options:   CCOptions   = UInt32(options)
-
-
-
-            var numBytesEncrypted :size_t = 0
-
-            let cryptStatus = CCCrypt(operation,
-                                      algoritm,
-                                      options,
-                                      (keyData as NSData).bytes, keyLength,
-                                      iv,
-                                      (data as NSData).bytes, data.count,
-                                      cryptData.mutableBytes, cryptData.length,
-                                      &numBytesEncrypted)
-
-            if UInt32(cryptStatus) == UInt32(kCCSuccess) {
-                cryptData.length = Int(numBytesEncrypted)
-                let base64cryptString = cryptData.base64EncodedString(options: .lineLength64Characters)
-                return base64cryptString
-
-
+        var numBytesEncrypted: Int = 0
+        
+        do {
+            let cryptStatus: CCCryptorStatus = CCCrypt(
+                                CCOperation(kCCEncrypt),                        // op: CCOperation
+                                CCAlgorithm(kCCAlgorithmAES128),                // alg: CCAlgorithm
+                                0x0000,                                         // options: CCOptions
+                                keyToDecryptNSData.bytes,                       // key: the "password"
+                                kCCKeySizeAES128,                               // keyLength: the "password" size
+                                [0x0],                                          // iv: Initialization Vector
+                                dataToDecryptNSData.bytes,                      // dataIn: Data to encrypt bytes
+                                dataLength,                                     // dataInLength: Data to encrypt size
+                                encryptDataPointer,                             // dataOut: encrypted Data buffer
+                                bufferSize,                                     // dataOutAvailable: encrypted Data buffer size
+                                &numBytesEncrypted)                             // dataOutMoved: the number of bytes written
+            
+            guard cryptStatus == CCCryptorStatus(kCCSuccess) else {
+                throw AESError.CryptorError(("Encryption status is \(cryptStatus)", -1))
             }
-            else {
-                return nil
-            }
+            
+            // LOG
+//            print("--------------------------------------------")
+//            print("kCCEncrypt: \(kCCEncrypt)")
+//            print("kCCAlgorithmAES128: \(kCCAlgorithmAES128)")
+//            print("kCCEncrypt: \(0x0000)")
+//            print("key bytes: \(keyToDecryptNSData)")
+//            print("dataLength: \(dataLength)")
+//            let demoD = Data(bytes: encryptDataPointer, count: dataLength)
+//            print("buffer: \(demoD as NSData)")
+//            print("bufferSize: \(bufferSize)")
+//            print("numBytesEncrypted: \(numBytesEncrypted)")
+//            print("--------------------------------------------")
+            // LOG END
+        } catch {
+            throw AESError.CryptorError(("Encryptin faild", -1))
         }
-        return nil
-    }
+        
+        let d = Data(bytes: encryptDataPointer, count: dataLength) // Encrypted data
+        encryptDataPointer.deallocate() // Free pointer
+        
+        return d;
+     }
 
-    func aesDecrypt(key:String, iv:String, options:Int = kCCOptionPKCS7Padding) -> String? {
-        if let keyData = key.data(using: String.Encoding.utf8),
-            let data = NSData(base64Encoded: self, options: .ignoreUnknownCharacters),
-            let cryptData    = NSMutableData(length: Int((data.length)) + kCCBlockSizeAES128) {
+     // The iv is prefixed to the encrypted data
+     func aesCBCDecrypt(data:Data, keyData:Data) throws -> Data? {
+         let keyLength = keyData.count
+        
+         let validKeyLengths = [kCCKeySizeAES128, kCCKeySizeAES192, kCCKeySizeAES256]
+         if (validKeyLengths.contains(keyLength) == false) {
+             self.call.reject("Invalid key length.\nYour key length \(keyLength).\nSchould be \(kCCKeySizeAES128), \(kCCKeySizeAES192), \(kCCKeySizeAES256)")
+         }
 
-            let keyLength              = size_t(kCCKeySizeAES128)
-            let operation: CCOperation = UInt32(kCCDecrypt)
-            let algoritm:  CCAlgorithm = UInt32(kCCAlgorithmAES128)
-            let options:   CCOptions   = UInt32(options)
-
-            var numBytesEncrypted :size_t = 0
-
-            let cryptStatus = CCCrypt(operation,
-                                      algoritm,
-                                      options,
-                                      (keyData as NSData).bytes, keyLength,
-                                      iv,
-                                      data.bytes, data.length,
-                                      cryptData.mutableBytes, cryptData.length,
-                                      &numBytesEncrypted)
-
-            if UInt32(cryptStatus) == UInt32(kCCSuccess) {
-                cryptData.length = Int(numBytesEncrypted)
-                let unencryptedMessage = String(data: cryptData as Data, encoding:String.Encoding.utf8)
-                return unencryptedMessage
-            }
-            else {
-                return nil
-            }
+        
+        let dataLength = data.count;
+        let clearLength = size_t(dataLength + kCCBlockSizeAES128)
+        let clearDataPointer = UnsafeMutableRawPointer.allocate(byteCount: clearLength, alignment: 1)
+        
+        var numberBytesDecrypted: Int = 0
+        
+        
+        
+        do {
+            try keyData.withUnsafeBytes { (u8Ptr: UnsafePointer<UInt8>) in
+            let keyBytes = UnsafeRawPointer(u8Ptr)
+                
+                try data.withUnsafeBytes { (u8Ptr: UnsafePointer<UInt8>) in
+                let dataToDecryptBytes = UnsafeRawPointer(u8Ptr)
+                        
+                        let cryptStatus: CCCryptorStatus = CCCrypt( // Stateless, one-shot encrypt operation
+                            CCOperation(kCCDecrypt),                // op: CCOperation
+                            CCAlgorithm(kCCAlgorithmAES128),        // alg: CCAlgorithm
+                            0x0000,                                 // options: CCOptions
+                            keyBytes,                               // key: the "password"
+                            kCCKeySizeAES128,                       // keyLength: the "password" size
+                            nil,                                    // iv: Initialization Vector
+                            dataToDecryptBytes,                     // dataIn: Data to decrypt bytes
+                            dataLength,                             // dataInLength: Data to decrypt size
+                            clearDataPointer,                             // dataOut: decrypted Data buffer
+                            clearLength,                             // dataOutAvailable: decrypted Data buffer size
+                            &numberBytesDecrypted                   // dataOutMoved: the number of bytes written
+                        )
+                        
+                        guard cryptStatus == CCCryptorStatus(kCCSuccess) else {
+                            throw AESError.CryptorError(("Decryption status is \(cryptStatus)", -1))
+                        }
+                    }
+                }
+        } catch {
+            throw AESError.CryptorError(("Decryptin faild", -1))
         }
-        return nil
-    }
-
-
+        
+        let d = Data(bytes: clearDataPointer, count: dataLength) // Decrypted data
+        clearDataPointer.deallocate() // Free pointer
+        
+        return d;
+     }
+    
+    
 }
