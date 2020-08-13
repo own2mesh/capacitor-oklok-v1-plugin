@@ -1,10 +1,11 @@
-declare global {
+// @ts-ignore
+declare module '@capacitor/core'{
   interface PluginRegistry {
-    Own2MeshOkLokPlugin?: Own2MeshOkLokPluginPlugin;
+    Own2MeshOkLokPlugin?: Own2MeshOkLokPlugin;
   }
 }
 
-export interface Own2MeshOkLokPluginPlugin {
+export interface Own2MeshOkLokPlugin {
   echo(options: { value: string }): Promise<{value: string}>;
   
   open(options: { address: string, secret: string, pw: string }): Promise<{ opened: boolean }>;
