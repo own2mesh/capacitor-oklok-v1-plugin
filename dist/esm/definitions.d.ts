@@ -11,26 +11,26 @@ export interface Own2MeshOkLokPlugin {
     }>;
     open(options: {
         address: string;
-        secret: string;
-        pw: string;
+        secret: string[];
+        pw: string[];
     }): Promise<{
         opened: boolean;
     }>;
     close(options: {
         address: string;
-        secret: string;
+        secret: string[];
     }): Promise<{
         closed: boolean;
     }>;
     battery_status(options: {
         address: string;
-        secret: string;
+        secret: string[];
     }): Promise<{
         percentage: number;
     }>;
     lock_status(options: {
         address: string;
-        secret: string;
+        secret: string[];
     }): Promise<{
         locked: boolean;
     }>;
