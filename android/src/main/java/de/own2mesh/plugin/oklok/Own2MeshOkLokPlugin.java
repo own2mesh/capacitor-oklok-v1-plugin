@@ -25,11 +25,14 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.NativePlugin;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
+
+import org.json.JSONException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,11 +52,12 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
     //region Inner-Classes
 
-    public enum ConnectionStatus {
-        DISCONNECTED,
-        CONNECTED,
-        ACQUIRING_TOKEN,
-        ACQUIRED_TOKEN
+    private enum CallType {
+        NONE,
+        OPEN,
+        CLOSE,
+        BAT_STAT,
+        LOCK_STAT
     }
 
     //endregion
@@ -63,15 +67,19 @@ public class Own2MeshOkLokPlugin extends Plugin {
     //region Fields
 
     private Own2MeshOkLokPlugin plugin;
-    private byte[] currentToken = {0x00, 0x00, 0x00, 0x00};
+    private String currentName = new String();
+    private String currentAddress = new String();
+    private byte[] currentSecret = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    private byte[] currentPassword = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    private byte[] currentToken = { 0x00, 0x00, 0x00, 0x00 };
 
     //region Static-Fields
 
-    private volatile static ConnectionStatus connectionStatus = ConnectionStatus.DISCONNECTED;
     @NativePlugin
     protected static final int REQUEST_ENABLE_BT = 1;
-    private static final long GATT_START_DELAY = 500; // msec
     private static final long SCAN_PERIOD = 10000; // msec
+
+    private static CallType callType = CallType.NONE;
 
     //endregion
 
@@ -120,6 +128,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
             Log.e("Scan Failed", "Error Code: " + errorCode);
         }
     };
+
     private BluetoothAdapter.LeScanCallback mLeScanCallback =
             new BluetoothAdapter.LeScanCallback() {
         @Override
@@ -142,11 +151,9 @@ public class Own2MeshOkLokPlugin extends Plugin {
             switch (newState) {
                 case BluetoothProfile.STATE_CONNECTED:
                     Log.i("gattCallback", "STATE_CONNECTED");
-                    connectionStatus = ConnectionStatus.CONNECTED;
                     gatt.discoverServices();
                     break;
                 case BluetoothProfile.STATE_DISCONNECTED:
-                    connectionStatus = ConnectionStatus.DISCONNECTED;
                     Log.e("gattCallback", "STATE_DISCONNECTED");
                     break;
                 default:
@@ -224,7 +231,6 @@ public class Own2MeshOkLokPlugin extends Plugin {
             if(values.length > 7){
                 if(values[0] == 0x06 && values[1] == 0x02){
                     plugin.currentToken = Arrays.copyOfRange(values, 3, 7);
-                    connectionStatus = ConnectionStatus.ACQUIRED_TOKEN;
 
                     Log.i("TOKEN", ByteArrayUtils.byteArrayToHexString(plugin.currentToken));
                 }
@@ -248,14 +254,12 @@ public class Own2MeshOkLokPlugin extends Plugin {
     Requests bluetooth to be enabled and scans for filtered/wanted locks and also connects to it.
     Returns if the scan has started.
      */
-    private void enable(PluginCall call, String address) throws IllegalStateException {
+    private void enable() {
         // Ensures Bluetooth is enabled on the device.  If Bluetooth is not currently enabled,
         // fire an intent to display a dialog asking the user to grant permission to enable it.
         if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) { // Kein Bluetooth Adapter gesetzt und deaktiviert?
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            saveCall(call);
-            startActivityForResult(call, enableBtIntent, REQUEST_ENABLE_BT);
-            throw new IllegalStateException("Bluetooth not enabled!");
+            startActivityForResult(getSavedCall(), enableBtIntent, REQUEST_ENABLE_BT);
         } else {
             if (Build.VERSION.SDK_INT >= 21) {
                 mScanner = mBluetoothAdapter.getBluetoothLeScanner();
@@ -263,21 +267,16 @@ public class Own2MeshOkLokPlugin extends Plugin {
                         .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
                         .build();
                 mScanFilters = new ArrayList<>();
-                ScanFilter scanFilter1 = new ScanFilter.Builder()
-                        .setDeviceName("OKUSS1M1A")
+                ScanFilter scanFilterAddress = new ScanFilter.Builder()
+                        .setDeviceAddress(currentAddress)
                         .build();
-                mScanFilters.add(scanFilter1);
-                ScanFilter scanFilter2 = new ScanFilter.Builder()
-                        .setDeviceName("OKGSS101")
-                        .build();
-                mScanFilters.add(scanFilter2);
-                ScanFilter scanFilter3 = new ScanFilter.Builder()
-                        .setDeviceName("OKUSS101")
-                        .build();
-                mScanFilters.add(scanFilter3);
-                ScanFilter scanFilter4 = new ScanFilter.Builder()
-                        .setDeviceAddress(address)
-                        .build();
+                mScanFilters.add(scanFilterAddress);
+                if (!currentName.equals(new String())) {
+                    ScanFilter scanFilterName = new ScanFilter.Builder()
+                            .setDeviceName(currentName)
+                            .build();
+                    mScanFilters.add(scanFilterName);
+                }
             }
             scan(true);
         }
@@ -328,53 +327,54 @@ public class Own2MeshOkLokPlugin extends Plugin {
     Connects to the specified device. If a device is connected, it will be disconnected.
      */
     private void connect(BluetoothDevice device) {
-        if (connectionStatus.equals(ConnectionStatus.DISCONNECTED)) {
-            if (mGatt != null) {
-                disconnect();
-            }
-            mGatt = device.connectGatt(this.getContext(), false, gattCallback);
+        if (mGatt != null) {
+            disconnect();
         }
+        mGatt = device.connectGatt(this.getContext(), false, gattCallback);
     }
 
     /*
     If a device is connected, it will be disconnected.
      */
     private void disconnect() {
-        if (!connectionStatus.equals(ConnectionStatus.DISCONNECTED)) {
-            if (mGatt == null) {
-                return;
-            }
-            mGatt.disconnect();
-            mGatt = null;
+        if (mGatt == null) {
+            return;
         }
+        mGatt.disconnect();
+        mGatt = null;
     }
 
-    private void token(String secret) {
-        if (connectionStatus.equals(ConnectionStatus.CONNECTED)) {
-            connectionStatus = ConnectionStatus.ACQUIRING_TOKEN;
-            byte[] key = ByteArrayUtils.csvStringToByteArray(secret);
-            byte[] content = ByteArrayUtils.hexStringToByteArray("060101013762556c68731d6d7e173b4d");
+    private void token() {
+        byte[] content = ByteArrayUtils.hexStringToByteArray("060101013762556c68731d6d7e173b4d");
 
-            byte[] values = EncryptionUtils.Encrypt(content, key);
+        byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
-            Log.i("onCharacteristicWrite", this.mWriteCharacteristic.toString());
-            this.mWriteCharacteristic.setValue(values);
-            Log.i("onCharacteristicWrite", this.mWriteCharacteristic.getValue().toString());
-            mGatt.writeCharacteristic(this.mWriteCharacteristic);
-        }
+        Log.i("onCharacteristicWrite", this.mWriteCharacteristic.toString());
+        this.mWriteCharacteristic.setValue(values);
+        Log.i("onCharacteristicWrite", this.mWriteCharacteristic.getValue().toString());
+        mGatt.writeCharacteristic(this.mWriteCharacteristic);
     }
 
-    private void open(String secret, String password) {
-        if (connectionStatus.equals(ConnectionStatus.ACQUIRED_TOKEN)) {
-            byte[] key = ByteArrayUtils.csvStringToByteArray(secret);
-            byte[] content = ByteArrayUtils.hexStringToByteArray("050106" + ByteArrayUtils.byteArrayToHexString(ByteArrayUtils.csvStringToByteArray(password)) + ByteArrayUtils.byteArrayToHexString(currentToken) + "303030");
+    private void open() {
+        byte[] content = ByteArrayUtils.hexStringToByteArray("050106" + ByteArrayUtils.byteArrayToHexString(currentPassword) + ByteArrayUtils.byteArrayToHexString(currentToken) + "303030");
 
-            byte[] values = EncryptionUtils.Encrypt(content, key);
+        byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
-            this.mWriteCharacteristic.setValue(values);
-            Log.i("onCharacteristicWrite", this.mWriteCharacteristic.getValue().toString());
-            mGatt.writeCharacteristic(this.mWriteCharacteristic);
-        }
+        this.mWriteCharacteristic.setValue(values);
+        Log.i("onCharacteristicWrite", this.mWriteCharacteristic.getValue().toString());
+        mGatt.writeCharacteristic(this.mWriteCharacteristic);
+    }
+
+    private void close() {
+        byte[] content = ByteArrayUtils.hexStringToByteArray("050106" + ByteArrayUtils.byteArrayToHexString(currentPassword) + ByteArrayUtils.byteArrayToHexString(currentToken) + "303030");
+    }
+
+    private void battery_status() {
+
+    }
+
+    private void lock_status() {
+
     }
 
     //endregion
@@ -433,8 +433,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
                         Toast.LENGTH_SHORT).show();
                 return;
             }
-            PluginCall last = getSavedCall();
-            enable(last, last.getString("address"));
+            enable();
         }
         super.handleOnActivityResult(requestCode, resultCode, data);
     }
@@ -456,31 +455,38 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
     @PluginMethod
     public void open(PluginCall call) {
-        String address = call.getString("address");
-        String secret = call.getString("secret");
-        String password = call.getString("pw");
-        JSObject ret = new JSObject();
-
+        saveCall(call);
+        currentName = call.getString("name");
+        currentAddress = call.getString("address");
         try {
-            enable(call, address);
-            token(secret);
-            open(secret, password);
-            disable();
-        } catch (IllegalStateException ex) {
+            currentSecret = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("secret")));
+            currentPassword = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("pw")));
+        } catch (JSONException ex) {
             call.reject(ex.getLocalizedMessage(), ex);
             return;
         }
 
+        callType = CallType.OPEN;
+        enable();
+
+        JSObject ret = new JSObject();
         ret.put("opened", true);
         call.resolve(ret);
     }
 
     @PluginMethod
     public void close(PluginCall call) {
-        String address = call.getString("address");
-        String secret = call.getString("secret");
+        saveCall(call);
+        currentAddress = call.getString("address");
+        try {
+            currentSecret = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("secret")));
+        } catch (JSONException ex) {
+            call.reject(ex.getLocalizedMessage(), ex);
+            return;
+        }
 
-        enable(call, address);
+        callType = CallType.CLOSE;
+        enable();
 
         JSObject ret = new JSObject();
         ret.put("closed", true);
@@ -489,8 +495,17 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
     @PluginMethod
     public void battery_status(PluginCall call) {
-        String address = call.getString("address");
-        String secret = call.getString("secret");
+        saveCall(call);
+        currentAddress = call.getString("address");
+        try {
+            currentSecret = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("secret")));
+        } catch (JSONException ex) {
+            call.reject(ex.getLocalizedMessage(), ex);
+            return;
+        }
+
+        callType = CallType.BAT_STAT;
+        enable();
 
         JSObject ret = new JSObject();
         ret.put("percentage", 100);
@@ -499,8 +514,17 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
     @PluginMethod
     public void lock_status(PluginCall call) {
-        String address = call.getString("address");
-        String secret = call.getString("secret");
+        saveCall(call);
+        currentAddress = call.getString("address");
+        try {
+            currentSecret = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("secret")));
+        } catch (JSONException ex) {
+            call.reject(ex.getLocalizedMessage(), ex);
+            return;
+        }
+
+        callType = CallType.LOCK_STAT;
+        enable();
 
         JSObject ret = new JSObject();
         ret.put("locked", true);

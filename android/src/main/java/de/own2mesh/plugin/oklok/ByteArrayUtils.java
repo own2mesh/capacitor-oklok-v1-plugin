@@ -1,5 +1,9 @@
 package de.own2mesh.plugin.oklok;
 
+import com.getcapacitor.JSArray;
+
+import org.json.JSONException;
+
 public class ByteArrayUtils {
     public static byte[] hexStringToByteArray(String s) {
         int len = s.length();
@@ -10,7 +14,6 @@ public class ByteArrayUtils {
         }
         return data;
     }
-
 
     public static byte[] decStringToByteArray(String s) {
         int len = s.length();
@@ -38,5 +41,13 @@ public class ByteArrayUtils {
             data[i] = (byte) digit;
         }
         return data;
+    }
+
+    public static String JSArrayToHexString(JSArray array) throws JSONException {
+        String hexString = new String();
+        for (int i = 0; i < array.length(); i++) {
+            hexString.concat(array.getString(i).split("x")[1]);
+        }
+        return hexString;
     }
 }
