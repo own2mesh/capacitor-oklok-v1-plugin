@@ -22,10 +22,8 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
-import android.view.View;
 import android.widget.Toast;
 
-import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.NativePlugin;
 import com.getcapacitor.Plugin;
@@ -48,6 +46,7 @@ import java.util.List;
         Manifest.permission.ACCESS_COARSE_LOCATION
     }
 )
+// 4c5f0c3c4c2853242036145b53592004
 public class Own2MeshOkLokPlugin extends Plugin {
 
     //region Inner-Classes
@@ -56,7 +55,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
         NONE,
         OPEN,
         CLOSE,
-        BAT_STAT,
+        BATT_STAT,
         LOCK_STAT
     }
 
@@ -202,6 +201,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
                     }
                 }
             }
+            token();
         }
 
         @Override
@@ -209,8 +209,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
             if(status == BluetoothGatt.GATT_SUCCESS){
                 Log.i("onCharacteristicWrite", "SUCCESS");
                 gatt.readCharacteristic(plugin.mReadCharacteristic);
-                byte[] key = ByteArrayUtils.hexStringToByteArray("4c5f0c3c4c2853242036145b53592004");
-                Log.i("Writing",ByteArrayUtils.byteArrayToHexString(EncryptionUtils.Decrypt(characteristic.getValue(), key)));
+                Log.i("Writing",ByteArrayUtils.byteArrayToHexString(EncryptionUtils.Decrypt(characteristic.getValue(), currentSecret)));
             }else {
                 Log.e("Status", ""+ status);
             }
@@ -225,15 +224,60 @@ public class Own2MeshOkLokPlugin extends Plugin {
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             Log.i("onCharacteristicChange", characteristic.toString());
 
-            byte[] key = ByteArrayUtils.hexStringToByteArray("4c5f0c3c4c2853242036145b53592004");
-            byte[] values = EncryptionUtils.Decrypt(characteristic.getValue(), key);
+            byte[] values = EncryptionUtils.Decrypt(characteristic.getValue(), currentSecret);
 
             if(values.length > 7){
+                //TOKEN
                 if(values[0] == 0x06 && values[1] == 0x02){
                     plugin.currentToken = Arrays.copyOfRange(values, 3, 7);
-
                     Log.i("TOKEN", ByteArrayUtils.byteArrayToHexString(plugin.currentToken));
+
+                    switch(callType) {
+                        case OPEN:
+                            open();
+                            break;
+                        case CLOSE:
+                            close();
+                            break;
+                        case BATT_STAT:
+                            battery_status();
+                            break;
+                        case LOCK_STAT:
+                            lock_status();
+                            break;
+                        default:
+                            Log.e("CALLTYPE","Unknown CallType: This should never happen.");
+                            break;
+                    }
+                    return;
                 }
+                JSObject ret = new JSObject();
+                //UNLOCKING
+                if(values[0] == 0x05 && values[1] == 0x02 && values[2] == 0x01) {
+                    String result = String.format("%02x", values[3]);
+                    Log.i("OPEN", result);
+                    ret.put("opened", result.equals("00") ? true : false);
+                }
+                //LOCKING
+                if(values[0] == 0x05 && values[1] == 0x0D && values[2] == 0x01) {
+                    String result = String.format("%02x", values[3]);
+                    Log.i("CLOSED", result);
+                    ret.put("closed", result.equals("00") ? true : false);
+                }
+                //BATT_STAT
+                if(values[0] == 0x02 && values[1] == 0x02 && values[2] == 0x01) {
+                    String result = String.format("%02x", values[3]);
+                    Log.i("BATT_STAT", result);
+                    ret.put("percentage", (((float) Integer.parseInt(result)) / 64) * 100);
+                }
+                //LOCK_STAT
+                if(values[0] == 0x05 && values[1] == 0x0F && values[2] == 0x01) {
+                    String result = String.format("%02x", values[3]);
+                    Log.i("CLOSED", result);
+                    ret.put("locked", result.equals("00") ? false : true);
+                }
+                plugin.getSavedCall().resolve(ret);
+                plugin.disable();
             }
         }
 
@@ -346,7 +390,6 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
     private void token() {
         byte[] content = ByteArrayUtils.hexStringToByteArray("060101013762556c68731d6d7e173b4d");
-
         byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
         Log.i("onCharacteristicWrite", this.mWriteCharacteristic.toString());
@@ -357,7 +400,6 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
     private void open() {
         byte[] content = ByteArrayUtils.hexStringToByteArray("050106" + ByteArrayUtils.byteArrayToHexString(currentPassword) + ByteArrayUtils.byteArrayToHexString(currentToken) + "303030");
-
         byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
         this.mWriteCharacteristic.setValue(values);
@@ -366,15 +408,30 @@ public class Own2MeshOkLokPlugin extends Plugin {
     }
 
     private void close() {
-        byte[] content = ByteArrayUtils.hexStringToByteArray("050106" + ByteArrayUtils.byteArrayToHexString(currentPassword) + ByteArrayUtils.byteArrayToHexString(currentToken) + "303030");
+        byte[] content = ByteArrayUtils.hexStringToByteArray("050C0101" + ByteArrayUtils.byteArrayToHexString(currentToken) + "3030303030303030");
+        byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
+
+        this.mWriteCharacteristic.setValue(values);
+        Log.i("onCharacteristicWrite", this.mWriteCharacteristic.getValue().toString());
+        mGatt.writeCharacteristic(this.mWriteCharacteristic);
     }
 
     private void battery_status() {
+        byte[] content = ByteArrayUtils.hexStringToByteArray("02010101" + ByteArrayUtils.byteArrayToHexString(currentToken) + "3030303030303030");
+        byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
+        this.mWriteCharacteristic.setValue(values);
+        Log.i("onCharacteristicWrite", this.mWriteCharacteristic.getValue().toString());
+        mGatt.writeCharacteristic(this.mWriteCharacteristic);
     }
 
     private void lock_status() {
+        byte[] content = ByteArrayUtils.hexStringToByteArray("050E0101" + ByteArrayUtils.byteArrayToHexString(currentToken) + "3030303030303030");
+        byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
+        this.mWriteCharacteristic.setValue(values);
+        Log.i("onCharacteristicWrite", this.mWriteCharacteristic.getValue().toString());
+        mGatt.writeCharacteristic(this.mWriteCharacteristic);
     }
 
     //endregion
@@ -458,6 +515,9 @@ public class Own2MeshOkLokPlugin extends Plugin {
         saveCall(call);
         currentName = call.getString("name");
         currentAddress = call.getString("address");
+        if (currentAddress == null || currentAddress.equals("")) {
+            call.reject("Non/Invalid MAC-Address provided.");
+        }
         try {
             currentSecret = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("secret")));
             currentPassword = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("pw")));
@@ -468,16 +528,15 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
         callType = CallType.OPEN;
         enable();
-
-        JSObject ret = new JSObject();
-        ret.put("opened", true);
-        call.resolve(ret);
     }
 
     @PluginMethod
     public void close(PluginCall call) {
         saveCall(call);
         currentAddress = call.getString("address");
+        if (currentAddress == null || currentAddress.equals("")) {
+            call.reject("Non/Invalid MAC-Address provided.");
+        }
         try {
             currentSecret = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("secret")));
         } catch (JSONException ex) {
@@ -487,16 +546,15 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
         callType = CallType.CLOSE;
         enable();
-
-        JSObject ret = new JSObject();
-        ret.put("closed", true);
-        call.resolve(ret);
     }
 
     @PluginMethod
     public void battery_status(PluginCall call) {
         saveCall(call);
         currentAddress = call.getString("address");
+        if (currentAddress == null || currentAddress.equals("")) {
+            call.reject("Non/Invalid MAC-Address provided.");
+        }
         try {
             currentSecret = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("secret")));
         } catch (JSONException ex) {
@@ -504,18 +562,17 @@ public class Own2MeshOkLokPlugin extends Plugin {
             return;
         }
 
-        callType = CallType.BAT_STAT;
+        callType = CallType.BATT_STAT;
         enable();
-
-        JSObject ret = new JSObject();
-        ret.put("percentage", 100);
-        call.resolve(ret);
     }
 
     @PluginMethod
     public void lock_status(PluginCall call) {
         saveCall(call);
         currentAddress = call.getString("address");
+        if (currentAddress == null || currentAddress.equals("")) {
+            call.reject("Non/Invalid MAC-Address provided.");
+        }
         try {
             currentSecret = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("secret")));
         } catch (JSONException ex) {
@@ -525,10 +582,6 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
         callType = CallType.LOCK_STAT;
         enable();
-
-        JSObject ret = new JSObject();
-        ret.put("locked", true);
-        call.resolve(ret);
     }
 
     //endregion
