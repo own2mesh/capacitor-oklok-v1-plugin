@@ -300,6 +300,13 @@ public class Own2MeshOkLokPlugin extends Plugin {
      */
     private void enable() {
         Log.i("ENABLE", "Called");
+
+        if (!this.hasRequiredPermissions()) {
+            this.getSavedCall().reject("Permissions not granted.");
+            this.pluginRequestAllPermissions();
+            return;
+        }
+
         // Ensures Bluetooth is enabled on the device.  If Bluetooth is not currently enabled,
         // fire an intent to display a dialog asking the user to grant permission to enable it.
         if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) { // Kein Bluetooth Adapter gesetzt und deaktiviert?
@@ -349,6 +356,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
         Log.i("SCAN", "Called " + enable);
         if (enable) {
             // Starting BLE scan
+            /*
             mScanHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
@@ -361,6 +369,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
                     }
                 }
             }, SCAN_PERIOD);// Stops scanning after a pre-defined scan period.
+            */
             if (Build.VERSION.SDK_INT < 21) {
                 Log.i("SCAN", "Started (low SDK)");
                 mBluetoothAdapter.startLeScan(mLeScanCallback);
@@ -464,6 +473,10 @@ public class Own2MeshOkLokPlugin extends Plugin {
         Log.i("HANDLEONSTART", "Called");
         mScanHandler = new Handler();
         plugin = this;
+
+        if (!this.hasRequiredPermissions()) {
+            pluginRequestAllPermissions();
+        }
 
         // Use this check to determine whether BLE is supported on the device.  Then you can
         // selectively disable BLE-related features.
