@@ -106,6 +106,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
     private ScanCallback mScanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
+            Log.i("SCANRESULT - SINGLE", "Called");
             BluetoothDevice btDevice = result.getDevice();
             Log.i("SCANRESULT - SINGLE", btDevice.getName());
             if (btDevice != null) {
@@ -115,8 +116,9 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
         @Override
         public void onBatchScanResults(List<ScanResult> results) {
+            Log.i("SCANRESULT - BATCH", "Called");
             for (ScanResult sr : results) {
-                Log.i("SCANRESULT - BATCH", sr.toString());
+                Log.i("SCANRESULT - SINGLE", sr.toString());
             }
         }
 
@@ -316,7 +318,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
                         .build();
                 mScanFilters.add(scanFilterAddress);
                 Log.i("ENABLE-SCANFILTER", scanFilterAddress.toString());
-                if (!currentName.equals(new String())) {
+                if (currentName != null && !currentName.equals(new String())) {
                     ScanFilter scanFilterName = new ScanFilter.Builder()
                             .setDeviceName(currentName)
                             .build();
@@ -512,6 +514,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
                 Toast.makeText(this.getContext(), "BLE not enabled",
                         Toast.LENGTH_SHORT).show();
                 Log.i("HANDLEONACTRESULT", "BLE not enabled");
+                this.getSavedCall().reject("BLE not enabled");
                 return;
             }
             enable();
