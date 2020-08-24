@@ -487,14 +487,6 @@ public class Own2MeshOkLokPlugin extends Plugin {
     }
 
     @Override
-    protected void handleOnPause() {
-        Log.i("HANDLEONPAUSE", "Called");
-        disable();
-
-        super.handleOnPause();
-    }
-
-    @Override
     protected void handleOnDestroy() {
         Log.i("HANDLEONDESTROY", "Called");
         if (mGatt == null) {
