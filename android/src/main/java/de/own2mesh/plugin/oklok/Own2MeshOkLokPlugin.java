@@ -107,10 +107,8 @@ public class Own2MeshOkLokPlugin extends Plugin {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             BluetoothDevice btDevice = result.getDevice();
+            Log.i("SCANRESULT - SINGLE", btDevice.getName());
             if (btDevice != null) {
-                if (btDevice.getName() != null) {
-                    Log.i("CONNECT", "" + btDevice.getName());
-                }
                 connect(btDevice);
             }
         }
@@ -118,13 +116,13 @@ public class Own2MeshOkLokPlugin extends Plugin {
         @Override
         public void onBatchScanResults(List<ScanResult> results) {
             for (ScanResult sr : results) {
-                Log.i("ScanResult - Results", sr.toString());
+                Log.i("SCANRESULT - BATCH", sr.toString());
             }
         }
 
         @Override
         public void onScanFailed(int errorCode) {
-            Log.e("Scan Failed", "Error Code: " + errorCode);
+            Log.e("SCANFAILED", "Error Code: " + errorCode);
         }
     };
 
@@ -135,7 +133,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
             ((Activity) plugin.getContext()).runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    Log.i("onLeScan", device.toString());
+                    Log.i("LESCANRESULT", device.getName());
                     connect(device);
                 }
             });
@@ -146,17 +144,17 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            Log.i("onConnectionStateChange", "Status: " + status);
+            Log.i("CONNECTIONCHANGED", "Status: " + status);
             switch (newState) {
                 case BluetoothProfile.STATE_CONNECTED:
-                    Log.i("gattCallback", "STATE_CONNECTED");
+                    Log.i("CONNECTIONCHANGED", "STATE_CONNECTED");
                     gatt.discoverServices();
                     break;
                 case BluetoothProfile.STATE_DISCONNECTED:
-                    Log.e("gattCallback", "STATE_DISCONNECTED");
+                    Log.e("CONNECTIONCHANGED", "STATE_DISCONNECTED");
                     break;
                 default:
-                    Log.e("gattCallback", "STATE_OTHER");
+                    Log.e("CONNECTIONCHANGED", "STATE_OTHER");
             }
 
         }
@@ -173,12 +171,12 @@ public class Own2MeshOkLokPlugin extends Plugin {
                     Log.i("service", services.get(i).getUuid().toString());
                     for (int j = 0; j < services.get(i).getCharacteristics().size(); j++) {
                         String charUUID = services.get(i).getCharacteristics().get(j).getUuid().toString().substring(0, 8);
-                        Log.i("characteristic", services.get(i).getCharacteristics().get(j).toString());
+                        Log.i("SERVICE-CHARACTERISTICS", services.get(i).getCharacteristics().get(j).toString());
 
                         Log.i("onServicesDiscovered", charUUID);
 
                         if (charUUID.equals("000036f5")) {
-                            Log.i("onServicesDiscovered", "write ");
+                            Log.i("SERVICE-CHARACTERISTIC", "Write ");
                             plugin.mWriteCharacteristic = services.get(i).getCharacteristics().get(j);
                             for (int k = 0; k < services.get(i).getCharacteristics().get(j).getDescriptors().size(); k++) {
                                 services.get(i).getCharacteristics().get(j).getDescriptors().get(k).setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);;
@@ -187,15 +185,15 @@ public class Own2MeshOkLokPlugin extends Plugin {
                                 Log.i("onDescriptorsDiscovered", services.get(i).getCharacteristics().get(j).getDescriptors().get(k).toString());
                             }
                         } else if (charUUID.equals("000036f6")) {
-                            Log.i("onServicesDiscovered", "read ");
+                            Log.i("SERVICE-CHARACTERISTIC", "Read ");
                             plugin.mReadCharacteristic = services.get(i).getCharacteristics().get(j);
                             gatt.setCharacteristicNotification(plugin.mReadCharacteristic, true);
 
                             for (int k = 0; k < services.get(i).getCharacteristics().get(j).getDescriptors().size(); k++) {
                                 services.get(i).getCharacteristics().get(j).getDescriptors().get(k).setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);;
                                 boolean success = gatt.writeDescriptor(services.get(i).getCharacteristics().get(j).getDescriptors().get(k));
-                                Log.i("onDescriptorsDiscovered", String.format("%b", success));
-                                Log.i("onDescriptorsDiscovered", services.get(i).getCharacteristics().get(j).getDescriptors().get(k).toString());
+                                Log.i("DESCIRPTOR-DISCOVERED", String.format("%b", success));
+                                Log.i("DESCIRPTOR-DISCOVERED", services.get(i).getCharacteristics().get(j).getDescriptors().get(k).toString());
                             }
                         }
                     }
@@ -207,22 +205,22 @@ public class Own2MeshOkLokPlugin extends Plugin {
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             if(status == BluetoothGatt.GATT_SUCCESS){
-                Log.i("onCharacteristicWrite", "SUCCESS");
+                Log.i("CHARACTERISTIC-WRITE", "SUCCESS");
                 gatt.readCharacteristic(plugin.mReadCharacteristic);
-                Log.i("Writing",ByteArrayUtils.byteArrayToHexString(EncryptionUtils.Decrypt(characteristic.getValue(), currentSecret)));
+                Log.i("CHARACTERISTIC-WRITE" ,ByteArrayUtils.byteArrayToHexString(EncryptionUtils.Decrypt(characteristic.getValue(), currentSecret)));
             }else {
-                Log.e("Status", ""+ status);
+                Log.e("CHARACTERISTIC-WRITE", ""+ status);
             }
         }
 
         @Override
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            Log.i("onCharacteristicRead", characteristic.toString());
+            Log.i("CHARACTERISTIC-READ", characteristic.toString());
         }
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            Log.i("onCharacteristicChange", characteristic.toString());
+            Log.i("CHARACTERISTIC-CHANGE", characteristic.toString());
 
             byte[] values = EncryptionUtils.Decrypt(characteristic.getValue(), currentSecret);
 
@@ -283,7 +281,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
         @Override
         public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-            Log.i("onDescriptorRead", descriptor.toString());
+            Log.i("DESCRIPTOR-READ", descriptor.toString());
         }
 
     };
@@ -299,9 +297,11 @@ public class Own2MeshOkLokPlugin extends Plugin {
     Returns if the scan has started.
      */
     private void enable() {
+        Log.i("ENABLE", "Called");
         // Ensures Bluetooth is enabled on the device.  If Bluetooth is not currently enabled,
         // fire an intent to display a dialog asking the user to grant permission to enable it.
         if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) { // Kein Bluetooth Adapter gesetzt und deaktiviert?
+            Log.i("ENABLE-BLUETOOTH", "Bluetooth not enabled");
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(getSavedCall(), enableBtIntent, REQUEST_ENABLE_BT);
         } else {
@@ -315,11 +315,13 @@ public class Own2MeshOkLokPlugin extends Plugin {
                         .setDeviceAddress(currentAddress)
                         .build();
                 mScanFilters.add(scanFilterAddress);
+                Log.i("ENABLE-SCANFILTER", scanFilterAddress.toString());
                 if (!currentName.equals(new String())) {
                     ScanFilter scanFilterName = new ScanFilter.Builder()
                             .setDeviceName(currentName)
                             .build();
                     mScanFilters.add(scanFilterName);
+                    Log.i("ENABLE-SCANFILTER", scanFilterName.toString());
                 }
             }
             scan(true);
@@ -330,6 +332,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
     Stops scaning for devices and disconnects connected device.
      */
     private void disable() {
+        Log.i("DISABLE", "Called");
         if (mBluetoothAdapter != null && mBluetoothAdapter.isEnabled()) {
             scan(false);
         }
@@ -339,28 +342,34 @@ public class Own2MeshOkLokPlugin extends Plugin {
     Scans for available devices and connects.
      */
     private void scan(final boolean enable) {
+        Log.i("SCAN", "Called " + enable);
         if (enable) {
             // Starting BLE scan
             mScanHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     if (Build.VERSION.SDK_INT < 21) {
+                        Log.i("SCAN", "Self stopped (low SDK)");
                         mBluetoothAdapter.stopLeScan(mLeScanCallback);
                     } else {
+                        Log.i("SCAN", "Self stopped");
                         mScanner.stopScan(mScanCallback);
-
                     }
                 }
             }, SCAN_PERIOD);// Stops scanning after a pre-defined scan period.
             if (Build.VERSION.SDK_INT < 21) {
+                Log.i("SCAN", "Started (low SDK)");
                 mBluetoothAdapter.startLeScan(mLeScanCallback);
             } else {
+                Log.i("SCAN", "Started");
                 mScanner.startScan(mScanFilters, mScanSettings, mScanCallback);
             }
         } else {
             if (Build.VERSION.SDK_INT < 21) {
+                Log.i("SCAN", "Stopped (low SDK)");
                 mBluetoothAdapter.stopLeScan(mLeScanCallback);
             } else {
+                Log.i("SCAN", "Stopped");
                 mScanner.stopScan(mScanCallback);
             }
             disconnect();
@@ -371,6 +380,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
     Connects to the specified device. If a device is connected, it will be disconnected.
      */
     private void connect(BluetoothDevice device) {
+        Log.i("CONNECT", "Called " + device.toString());
         if (mGatt != null) {
             disconnect();
         }
@@ -381,6 +391,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
     If a device is connected, it will be disconnected.
      */
     private void disconnect() {
+        Log.i("DISCONNECT", "Called");
         if (mGatt == null) {
             return;
         }
@@ -389,48 +400,52 @@ public class Own2MeshOkLokPlugin extends Plugin {
     }
 
     private void token() {
+        Log.i("TOKEN", "Called");
         byte[] content = ByteArrayUtils.hexStringToByteArray("060101013762556c68731d6d7e173b4d");
         byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
-        Log.i("onCharacteristicWrite", this.mWriteCharacteristic.toString());
         this.mWriteCharacteristic.setValue(values);
-        Log.i("onCharacteristicWrite", this.mWriteCharacteristic.getValue().toString());
+        Log.i("CHARACTERISTIC-TOWRITE", this.mWriteCharacteristic.getValue().toString());
         mGatt.writeCharacteristic(this.mWriteCharacteristic);
     }
 
     private void open() {
+        Log.i("OPEN", "Called");
         byte[] content = ByteArrayUtils.hexStringToByteArray("050106" + ByteArrayUtils.byteArrayToHexString(currentPassword) + ByteArrayUtils.byteArrayToHexString(currentToken) + "303030");
         byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
         this.mWriteCharacteristic.setValue(values);
-        Log.i("onCharacteristicWrite", this.mWriteCharacteristic.getValue().toString());
+        Log.i("CHARACTERISTIC-TOWRITE", this.mWriteCharacteristic.getValue().toString());
         mGatt.writeCharacteristic(this.mWriteCharacteristic);
     }
 
     private void close() {
+        Log.i("CLOSE", "Called");
         byte[] content = ByteArrayUtils.hexStringToByteArray("050C0101" + ByteArrayUtils.byteArrayToHexString(currentToken) + "3030303030303030");
         byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
         this.mWriteCharacteristic.setValue(values);
-        Log.i("onCharacteristicWrite", this.mWriteCharacteristic.getValue().toString());
+        Log.i("CHARACTERISTIC-TOWRITE", this.mWriteCharacteristic.getValue().toString());
         mGatt.writeCharacteristic(this.mWriteCharacteristic);
     }
 
     private void battery_status() {
+        Log.i("BATT_STAT", "Called");
         byte[] content = ByteArrayUtils.hexStringToByteArray("02010101" + ByteArrayUtils.byteArrayToHexString(currentToken) + "3030303030303030");
         byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
         this.mWriteCharacteristic.setValue(values);
-        Log.i("onCharacteristicWrite", this.mWriteCharacteristic.getValue().toString());
+        Log.i("CHARACTERISTIC-TOWRITE", this.mWriteCharacteristic.getValue().toString());
         mGatt.writeCharacteristic(this.mWriteCharacteristic);
     }
 
     private void lock_status() {
+        Log.i("LOCK_STAT", "Called");
         byte[] content = ByteArrayUtils.hexStringToByteArray("050E0101" + ByteArrayUtils.byteArrayToHexString(currentToken) + "3030303030303030");
         byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
         this.mWriteCharacteristic.setValue(values);
-        Log.i("onCharacteristicWrite", this.mWriteCharacteristic.getValue().toString());
+        Log.i("CHARACTERISTIC-TOWRITE", this.mWriteCharacteristic.getValue().toString());
         mGatt.writeCharacteristic(this.mWriteCharacteristic);
     }
 
@@ -442,35 +457,42 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
     @Override
     protected void handleOnStart() {
-        super.handleOnStart();
-
+        Log.i("HANDLEONSTART", "Called");
         mScanHandler = new Handler();
         plugin = this;
 
         // Use this check to determine whether BLE is supported on the device.  Then you can
         // selectively disable BLE-related features.
+        Log.i("HANDLEONSTART", "BLE Support");
         if (!this.getContext().getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-            Toast.makeText(this.getContext(), "BLE Not Supported",
+            Toast.makeText(this.getContext(), "BLE not supported",
                     Toast.LENGTH_SHORT).show();
+            Log.i("HANDLEONSTART", "BLE not supported");
             return;
         }
 
         // Initializes a Bluetooth adapter.  For API level 18 and above, get a reference to
         // BluetoothAdapter through BluetoothManager.
+        Log.i("HANDLEONSTART", "BL-Manager");
         final BluetoothManager bluetoothManager =
                 (BluetoothManager) this.getContext().getSystemService(Context.BLUETOOTH_SERVICE);
+        Log.i("HANDLEONSTART", "BL-Adapter");
         mBluetoothAdapter = bluetoothManager.getAdapter();
+
+        super.handleOnStart();
     }
 
     @Override
     protected void handleOnPause() {
-        super.handleOnPause();
-
+        Log.i("HANDLEONPAUSE", "Called");
         disable();
+
+        super.handleOnPause();
     }
 
     @Override
     protected void handleOnDestroy() {
+        Log.i("HANDLEONDESTROY", "Called");
         if (mGatt == null) {
             super.handleOnDestroy();
             return;
@@ -482,12 +504,14 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
     @Override
     protected void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.i("HANDLEONACTRESULT", "Called " + requestCode);
         // User chose not to enable Bluetooth.
         if (requestCode == REQUEST_ENABLE_BT) {
             if (resultCode == Activity.RESULT_CANCELED) {
                 //Bluetooth not enabled.
-                Toast.makeText(this.getContext(), "BLE Not Enabled",
+                Toast.makeText(this.getContext(), "BLE not enabled",
                         Toast.LENGTH_SHORT).show();
+                Log.i("HANDLEONACTRESULT", "BLE not enabled");
                 return;
             }
             enable();
@@ -503,7 +527,9 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
     @PluginMethod()
     public void echo(PluginCall call) {
+        Log.i("ECHO", "Called");
         String value = call.getString("value");
+        Log.i("ECHO", value);
 
         JSObject ret = new JSObject();
         ret.put("value", value);
@@ -512,16 +538,25 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
     @PluginMethod
     public void open(PluginCall call) {
+        Log.i("OPEN", "Called");
         saveCall(call);
         currentName = call.getString("name");
+        Log.i("OPEN", "Name: " + currentName);
         currentAddress = call.getString("address");
+        Log.i("OPEN", "Address: " + currentAddress);
         if (currentAddress == null || currentAddress.equals("")) {
+            Log.e("OPEN", "Non/Invalid MAC-Address provided.");
             call.reject("Non/Invalid MAC-Address provided.");
         }
         try {
-            currentSecret = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("secret")));
-            currentPassword = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("pw")));
+            String secret = ByteArrayUtils.JSArrayToHexString(call.getArray("secret"));
+            Log.i("OPEN", "Secret: " + secret);
+            currentSecret = ByteArrayUtils.hexStringToByteArray(secret);
+            String pw = ByteArrayUtils.JSArrayToHexString(call.getArray("pw"));
+            Log.i("OPEN", "Password: " + pw);
+            currentPassword = ByteArrayUtils.hexStringToByteArray(pw);
         } catch (JSONException ex) {
+            Log.e("OPEN", ex.getLocalizedMessage(), ex);
             call.reject(ex.getLocalizedMessage(), ex);
             return;
         }
@@ -532,14 +567,20 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
     @PluginMethod
     public void close(PluginCall call) {
+        Log.i("CLOSE", "Called");
         saveCall(call);
         currentAddress = call.getString("address");
+        Log.i("CLOSE", "Address: " + currentAddress);
         if (currentAddress == null || currentAddress.equals("")) {
+            Log.e("CLOSE", "Non/Invalid MAC-Address provided.");
             call.reject("Non/Invalid MAC-Address provided.");
         }
         try {
-            currentSecret = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("secret")));
+            String secret = ByteArrayUtils.JSArrayToHexString(call.getArray("secret"));
+            Log.i("CLOSE", "Secret: " + secret);
+            currentSecret = ByteArrayUtils.hexStringToByteArray(secret);
         } catch (JSONException ex) {
+            Log.e("CLOSE", ex.getLocalizedMessage(), ex);
             call.reject(ex.getLocalizedMessage(), ex);
             return;
         }
@@ -550,14 +591,20 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
     @PluginMethod
     public void battery_status(PluginCall call) {
+        Log.i("BATT_STAT", "Called");
         saveCall(call);
         currentAddress = call.getString("address");
+        Log.i("BATT_STAT", "Address: " + currentAddress);
         if (currentAddress == null || currentAddress.equals("")) {
+            Log.e("BATT_STAT", "Non/Invalid MAC-Address provided.");
             call.reject("Non/Invalid MAC-Address provided.");
         }
         try {
-            currentSecret = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("secret")));
+            String secret = ByteArrayUtils.JSArrayToHexString(call.getArray("secret"));
+            Log.i("BATT_STAT", "Secret: " + secret);
+            currentSecret = ByteArrayUtils.hexStringToByteArray(secret);
         } catch (JSONException ex) {
+            Log.e("BATT_STAT", ex.getLocalizedMessage(), ex);
             call.reject(ex.getLocalizedMessage(), ex);
             return;
         }
@@ -568,14 +615,20 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
     @PluginMethod
     public void lock_status(PluginCall call) {
+        Log.i("LOCK_STAT", "Called");
         saveCall(call);
         currentAddress = call.getString("address");
+        Log.i("LOCK_STAT", "Address: " + currentAddress);
         if (currentAddress == null || currentAddress.equals("")) {
+            Log.e("LOCK_STAT", "Non/Invalid MAC-Address provided.");
             call.reject("Non/Invalid MAC-Address provided.");
         }
         try {
-            currentSecret = ByteArrayUtils.hexStringToByteArray(ByteArrayUtils.JSArrayToHexString(call.getArray("secret")));
+            String secret = ByteArrayUtils.JSArrayToHexString(call.getArray("secret"));
+            Log.i("LOCK_STAT", "Secret: " + secret);
+            currentSecret = ByteArrayUtils.hexStringToByteArray(secret);
         } catch (JSONException ex) {
+            Log.e("LOCK_STAT", ex.getLocalizedMessage(), ex);
             call.reject(ex.getLocalizedMessage(), ex);
             return;
         }
