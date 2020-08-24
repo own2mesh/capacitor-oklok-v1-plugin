@@ -330,7 +330,9 @@ public class Own2MeshOkLokPlugin extends Plugin {
     Stops scaning for devices and disconnects connected device.
      */
     private void disable() {
-        if (mBluetoothAdapter != null && mBluetoothAdapter.isEnabled()) {
+        if (Build.VERSION.SDK_INT < 21 && mBluetoothAdapter != null && mBluetoothAdapter.isEnabled()) {
+            scan(false);
+        } else if(mScanner != null) {
             scan(false);
         }
     }
