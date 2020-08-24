@@ -335,7 +335,9 @@ public class Own2MeshOkLokPlugin extends Plugin {
      */
     private void disable() {
         Log.i("DISABLE", "Called");
-        if (mBluetoothAdapter != null && mBluetoothAdapter.isEnabled()) {
+        if (Build.VERSION.SDK_INT < 21 && mBluetoothAdapter != null && mBluetoothAdapter.isEnabled()) {
+            scan(false);
+        } else if (mScanner != null) {
             scan(false);
         }
     }

@@ -44,10 +44,11 @@ public class ByteArrayUtils {
     }
 
     public static String JSArrayToHexString(JSArray array) throws JSONException {
-        String hexString = new String();
+        String hexString = "";
         for (int i = 0; i < array.length(); i++) {
-            hexString.concat(array.getString(i).split("x")[1]);
+            hexString += array.getString(i).substring(2);
         }
+        // Log.i("HexString", hexString);
         return hexString;
     }
 }
