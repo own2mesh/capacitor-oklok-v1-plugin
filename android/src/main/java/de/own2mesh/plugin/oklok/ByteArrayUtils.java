@@ -48,7 +48,7 @@ public class ByteArrayUtils {
         for (int i = 0; i < array.length(); i++) {
             hexString += array.getString(i).substring(2);
         }
-        Log.i("HexString", hexString);
+        // Log.i("HexString", hexString);
         return hexString;
     }
 }
