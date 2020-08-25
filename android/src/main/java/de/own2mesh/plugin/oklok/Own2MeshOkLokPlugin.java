@@ -35,16 +35,18 @@ import org.json.JSONException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 @NativePlugin(
-    requestCodes = {
-        Own2MeshOkLokPlugin.REQUEST_ENABLE_BT
-    },
-    permissions = {
-        Manifest.permission.BLUETOOTH,
-        Manifest.permission.BLUETOOTH_ADMIN,
-        Manifest.permission.ACCESS_COARSE_LOCATION
-    }
+        requestCodes = {
+                Own2MeshOkLokPlugin.REQUEST_ENABLE_BT
+        },
+        permissions = {
+                Manifest.permission.BLUETOOTH,
+                Manifest.permission.BLUETOOTH_ADMIN,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+        }
 )
 // 4c5f0c3c4c2853242036145b53592004
 public class Own2MeshOkLokPlugin extends Plugin {
@@ -108,8 +110,9 @@ public class Own2MeshOkLokPlugin extends Plugin {
         public void onScanResult(int callbackType, ScanResult result) {
             Log.i("SCANRESULT - SINGLE", "Called");
             BluetoothDevice btDevice = result.getDevice();
-            Log.i("SCANRESULT - SINGLE", btDevice.getName());
+            Log.i("SCANRESULT - SINGLE", btDevice.toString());
             if (btDevice != null) {
+                disable();
                 connect(btDevice);
             }
         }
@@ -130,17 +133,17 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
     private BluetoothAdapter.LeScanCallback mLeScanCallback =
             new BluetoothAdapter.LeScanCallback() {
-        @Override
-        public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
-            ((Activity) plugin.getContext()).runOnUiThread(new Runnable() {
                 @Override
-                public void run() {
-                    Log.i("LESCANRESULT", device.getName());
-                    connect(device);
+                public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
+                    ((Activity) plugin.getContext()).runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Log.i("LESCANRESULT", device.toString());
+                            connect(device);
+                        }
+                    });
                 }
-            });
-        }
-    };
+            };
 
     private final BluetoothGattCallback gattCallback = new BluetoothGattCallback() {
 
@@ -180,8 +183,11 @@ public class Own2MeshOkLokPlugin extends Plugin {
                         if (charUUID.equals("000036f5")) {
                             Log.i("SERVICE-CHARACTERISTIC", "Write ");
                             plugin.mWriteCharacteristic = services.get(i).getCharacteristics().get(j);
+                            gatt.setCharacteristicNotification(plugin.mWriteCharacteristic, true);
+                            Log.i("SERVICE-CHARACTERISTIC", "Write: " + plugin.mWriteCharacteristic.toString());
+
                             for (int k = 0; k < services.get(i).getCharacteristics().get(j).getDescriptors().size(); k++) {
-                                services.get(i).getCharacteristics().get(j).getDescriptors().get(k).setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);;
+                                services.get(i).getCharacteristics().get(j).getDescriptors().get(k).setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
                                 boolean success = gatt.writeDescriptor(services.get(i).getCharacteristics().get(j).getDescriptors().get(k));
                                 Log.i("onDescriptorsDiscovered", String.format("%d", success));
                                 Log.i("onDescriptorsDiscovered", services.get(i).getCharacteristics().get(j).getDescriptors().get(k).toString());
@@ -190,6 +196,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
                             Log.i("SERVICE-CHARACTERISTIC", "Read ");
                             plugin.mReadCharacteristic = services.get(i).getCharacteristics().get(j);
                             gatt.setCharacteristicNotification(plugin.mReadCharacteristic, true);
+                            Log.i("SERVICE-CHARACTERISTIC", "Read: " + plugin.mReadCharacteristic.toString());
 
                             for (int k = 0; k < services.get(i).getCharacteristics().get(j).getDescriptors().size(); k++) {
                                 services.get(i).getCharacteristics().get(j).getDescriptors().get(k).setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);;
@@ -201,15 +208,13 @@ public class Own2MeshOkLokPlugin extends Plugin {
                     }
                 }
             }
-            token();
+
         }
 
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             if(status == BluetoothGatt.GATT_SUCCESS){
-                Log.i("CHARACTERISTIC-WRITE", "SUCCESS");
-                gatt.readCharacteristic(plugin.mReadCharacteristic);
-                Log.i("CHARACTERISTIC-WRITE" ,ByteArrayUtils.byteArrayToHexString(EncryptionUtils.Decrypt(characteristic.getValue(), currentSecret)));
+                Log.i("CHARACTERISTIC-WRITE", ByteArrayUtils.byteArrayToHexString(EncryptionUtils.Decrypt(characteristic.getValue(), currentSecret)));
             }else {
                 Log.e("CHARACTERISTIC-WRITE", ""+ status);
             }
@@ -222,68 +227,72 @@ public class Own2MeshOkLokPlugin extends Plugin {
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            Log.i("CHARACTERISTIC-CHANGE", characteristic.toString());
-
             byte[] values = EncryptionUtils.Decrypt(characteristic.getValue(), currentSecret);
+            Log.i("CHARACTERISTIC-CHANGE", ByteArrayUtils.byteArrayToHexString(values));
 
-            if(values.length > 7){
-                //TOKEN
-                if(values[0] == 0x06 && values[1] == 0x02){
-                    plugin.currentToken = Arrays.copyOfRange(values, 3, 7);
-                    Log.i("TOKEN", ByteArrayUtils.byteArrayToHexString(plugin.currentToken));
+            //TOKEN
+            if(values[0] == 0x06 && values[1] == 0x02){
+                plugin.currentToken = Arrays.copyOfRange(values, 3, 7);
+                Log.i("TOKEN", ByteArrayUtils.byteArrayToHexString(plugin.currentToken));
 
-                    switch(callType) {
-                        case OPEN:
-                            open();
-                            break;
-                        case CLOSE:
-                            close();
-                            break;
-                        case BATT_STAT:
-                            battery_status();
-                            break;
-                        case LOCK_STAT:
-                            lock_status();
-                            break;
-                        default:
-                            Log.e("CALLTYPE","Unknown CallType: This should never happen.");
-                            break;
-                    }
-                    return;
+                switch(callType) {
+                    case OPEN:
+                        open();
+                        break;
+                    case CLOSE:
+                        close();
+                        break;
+                    case BATT_STAT:
+                        battery_status();
+                        break;
+                    case LOCK_STAT:
+                        lock_status();
+                        break;
+                    default:
+                        Log.e("CALLTYPE","Unknown CallType: This should never happen.");
+                        break;
                 }
-                JSObject ret = new JSObject();
-                //UNLOCKING
-                if(values[0] == 0x05 && values[1] == 0x02 && values[2] == 0x01) {
-                    String result = String.format("%02x", values[3]);
-                    Log.i("OPEN", result);
-                    ret.put("opened", result.equals("00") ? true : false);
-                }
-                //LOCKING
-                if(values[0] == 0x05 && values[1] == 0x0D && values[2] == 0x01) {
-                    String result = String.format("%02x", values[3]);
-                    Log.i("CLOSED", result);
-                    ret.put("closed", result.equals("00") ? true : false);
-                }
-                //BATT_STAT
-                if(values[0] == 0x02 && values[1] == 0x02 && values[2] == 0x01) {
-                    String result = String.format("%02x", values[3]);
-                    Log.i("BATT_STAT", result);
-                    ret.put("percentage", (((float) Integer.parseInt(result)) / 64) * 100);
-                }
-                //LOCK_STAT
-                if(values[0] == 0x05 && values[1] == 0x0F && values[2] == 0x01) {
-                    String result = String.format("%02x", values[3]);
-                    Log.i("CLOSED", result);
-                    ret.put("locked", result.equals("00") ? false : true);
-                }
-                plugin.getSavedCall().resolve(ret);
-                plugin.disable();
+                return;
             }
+            JSObject ret = new JSObject();
+            //UNLOCKING
+            if(values[0] == 0x05 && values[1] == 0x02 && values[2] == 0x01) {
+                String result = String.format("%02x", values[3]);
+                Log.i("OPEN", result);
+                ret.put("opened", result.equals("00") ? true : false);
+            }
+            //LOCKING
+            if(values[0] == 0x05 && values[1] == 0x0D && values[2] == 0x01) {
+                String result = String.format("%02x", values[3]);
+                Log.i("CLOSED", result);
+                ret.put("closed", result.equals("00") ? true : false);
+            }
+            //BATT_STAT
+            if(values[0] == 0x02 && values[1] == 0x02 && values[2] == 0x01) {
+                String result = String.format("%02x", values[3]);
+                Log.i("BATT_STAT", result);
+                ret.put("percentage", (((float) Integer.parseInt(result)) / 64) * 100);
+            }
+            //LOCK_STAT
+            if(values[0] == 0x05 && values[1] == 0x0F && values[2] == 0x01) {
+                String result = String.format("%02x", values[3]);
+                Log.i("CLOSED", result);
+                ret.put("locked", result.equals("00") ? false : true);
+            }
+            plugin.getSavedCall().resolve(ret);
+            plugin.disconnect();
         }
 
         @Override
         public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
             Log.i("DESCRIPTOR-READ", descriptor.toString());
+        }
+
+        @Override
+        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+            Log.i("DESCRIPTOR-WRITE", descriptor.toString());
+
+            token();
         }
 
     };
@@ -356,7 +365,6 @@ public class Own2MeshOkLokPlugin extends Plugin {
         Log.i("SCAN", "Called " + enable);
         if (enable) {
             // Starting BLE scan
-            /*
             mScanHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
@@ -369,23 +377,22 @@ public class Own2MeshOkLokPlugin extends Plugin {
                     }
                 }
             }, SCAN_PERIOD);// Stops scanning after a pre-defined scan period.
-            */
             if (Build.VERSION.SDK_INT < 21) {
                 Log.i("SCAN", "Started (low SDK)");
                 mBluetoothAdapter.startLeScan(mLeScanCallback);
             } else {
-                Log.i("SCAN", "Started");
+                Log.i("SCAN", "Starting");
                 mScanner.startScan(mScanFilters, mScanSettings, mScanCallback);
+                Log.i("SCAN", "Started");
             }
         } else {
             if (Build.VERSION.SDK_INT < 21) {
-                Log.i("SCAN", "Stopped (low SDK)");
+                Log.i("SCAN", "Stopped (low S ,DK)");
                 mBluetoothAdapter.stopLeScan(mLeScanCallback);
             } else {
                 Log.i("SCAN", "Stopped");
                 mScanner.stopScan(mScanCallback);
             }
-            disconnect();
         }
     }
 
@@ -418,8 +425,10 @@ public class Own2MeshOkLokPlugin extends Plugin {
         byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
         this.mWriteCharacteristic.setValue(values);
-        Log.i("CHARACTERISTIC-TOWRITE", this.mWriteCharacteristic.getValue().toString());
-        mGatt.writeCharacteristic(this.mWriteCharacteristic);
+        Log.i("CHARACTERISTIC-TOWRITE", ByteArrayUtils.byteArrayToHexString(this.mWriteCharacteristic.getValue()));
+        mWriteCharacteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+        boolean success = mGatt.writeCharacteristic(this.mWriteCharacteristic);
+        Log.i("CHARACTERISTIC-TOWRITE", "Called: " + success);
     }
 
     private void open() {
@@ -427,9 +436,11 @@ public class Own2MeshOkLokPlugin extends Plugin {
         byte[] content = ByteArrayUtils.hexStringToByteArray("050106" + ByteArrayUtils.byteArrayToHexString(currentPassword) + ByteArrayUtils.byteArrayToHexString(currentToken) + "303030");
         byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
+        Log.i("CHARACTERISTIC-TOWRITE", this.mWriteCharacteristic.toString());
         this.mWriteCharacteristic.setValue(values);
         Log.i("CHARACTERISTIC-TOWRITE", this.mWriteCharacteristic.getValue().toString());
         mGatt.writeCharacteristic(this.mWriteCharacteristic);
+        Log.i("CHARACTERISTIC-TOWRITE", "Called");
     }
 
     private void close() {
@@ -437,6 +448,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
         byte[] content = ByteArrayUtils.hexStringToByteArray("050C0101" + ByteArrayUtils.byteArrayToHexString(currentToken) + "3030303030303030");
         byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
+        Log.i("CHARACTERISTIC-TOWRITE", this.mWriteCharacteristic.toString());
         this.mWriteCharacteristic.setValue(values);
         Log.i("CHARACTERISTIC-TOWRITE", this.mWriteCharacteristic.getValue().toString());
         mGatt.writeCharacteristic(this.mWriteCharacteristic);
@@ -447,6 +459,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
         byte[] content = ByteArrayUtils.hexStringToByteArray("02010101" + ByteArrayUtils.byteArrayToHexString(currentToken) + "3030303030303030");
         byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
+        Log.i("CHARACTERISTIC-TOWRITE", this.mWriteCharacteristic.toString());
         this.mWriteCharacteristic.setValue(values);
         Log.i("CHARACTERISTIC-TOWRITE", this.mWriteCharacteristic.getValue().toString());
         mGatt.writeCharacteristic(this.mWriteCharacteristic);
@@ -457,6 +470,7 @@ public class Own2MeshOkLokPlugin extends Plugin {
         byte[] content = ByteArrayUtils.hexStringToByteArray("050E0101" + ByteArrayUtils.byteArrayToHexString(currentToken) + "3030303030303030");
         byte[] values = EncryptionUtils.Encrypt(content, currentSecret);
 
+        Log.i("CHARACTERISTIC-TOWRITE", this.mWriteCharacteristic.toString());
         this.mWriteCharacteristic.setValue(values);
         Log.i("CHARACTERISTIC-TOWRITE", this.mWriteCharacteristic.getValue().toString());
         mGatt.writeCharacteristic(this.mWriteCharacteristic);
