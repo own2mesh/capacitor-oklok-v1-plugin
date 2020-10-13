@@ -37,25 +37,25 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     private var whatYouWant: Int = 0; // switch for different stuff (open, battery_status,..) must be difer
     
     @objc func echo(_ call: CAPPluginCall) {
-        call.resolve(["value": "Echo"])
+        call.resolve(["value": "Hello back from own-2-mesh plugin!"])
     }
     
     @objc func open(_ call: CAPPluginCall) {
         guard let nameCheck = call.options["name"] as? String else {
-            call.reject("Must provide an name")
+            call.reject("Must provide a name")
           return
         }
         self.name = nameCheck
         
         guard let secretCheck = call.options["secret"] as? [String] else {
-          call.reject("Must provide an secret")
+          call.reject("Must provide a secret")
           return
         }
         let uint8Array = secretCheck.map{ UInt8($0.dropFirst(2), radix: 16)! }
         self.secretData = Data(bytes: uint8Array, count: secretCheck.count)
 
         guard let pwCheck = call.options["pw"] as? [String] else {
-          call.reject("Must provide an password (pw)")
+          call.reject("Must provide a password (pw)")
           return
         }
         let uint8ArrayPW = pwCheck.map{ UInt8($0.dropFirst(2), radix: 16)! }
