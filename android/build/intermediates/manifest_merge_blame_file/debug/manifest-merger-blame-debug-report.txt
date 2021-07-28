@@ -1,0 +1,23 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="de.own2mesh.plugin.oklok.own2meshcapacitorpluginoklok"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="21"
+8-->/Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+9        android:targetSdkVersion="29" />
+9-->/Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+10
+11    <uses-permission android:name="android.permission.BLUETOOTH" />
+11-->/Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:5:7-70
+11-->/Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:5:24-67
+12    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+12-->/Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:6:7-76
+12-->/Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:6:24-73
+13    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+13-->/Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:7:7-83
+13-->/Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:7:24-80
+14
+15</manifest>

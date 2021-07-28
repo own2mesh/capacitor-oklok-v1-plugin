@@ -1,0 +1,49 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:2:3-8:14
+INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:2:3-8:14
+INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:2:3-8:14
+INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:2:3-8:14
+INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:2:3-8:14
+INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:2:3-8:14
+INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:2:3-8:14
+	package
+		ADDED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:3:7-70
+		INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+		INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+	android:versionName
+		INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+		ADDED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:2:3-8:14
+		INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+	android:versionCode
+		INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+		ADDED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:2:3-8:14
+		INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:2:13-71
+uses-permission#android.permission.BLUETOOTH
+ADDED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:5:7-70
+	android:name
+		ADDED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:5:24-67
+uses-permission#android.permission.BLUETOOTH_ADMIN
+ADDED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:6:7-76
+	android:name
+		ADDED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:6:24-73
+uses-permission#android.permission.ACCESS_COARSE_LOCATION
+ADDED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:7:7-83
+	android:name
+		ADDED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml:7:24-80
+uses-sdk
+INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+		ADDED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+		INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+		ADDED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
+		INJECTED from /Users/smaschmann/Documents/Work/Own2Mesh/demo-ionic-own-2-mesh/node_modules/own2mesh-capacitor-plugin-oklok/android/src/main/AndroidManifest.xml
