@@ -29,6 +29,44 @@ Otherwise contact us via email: own2mesh@gmail.com
 > ```typescript
 > Own2MeshOkLokPlugin.theMethodeYouLike();
 >```
+
+> ### (Android only) Add our installed plugin to the MainActivity
+>
+> File Path: *myApp/android/app/src/main/java/io/ionic/starter/MainActivity.java*
+>
+> `import de.own2mesh.plugin.oklok.Own2MeshOkLokPlugin;`
+>
+> `add(Own2MeshOkLokPlugin.class);`
+>
+> The MainActivity.java should look like this:
+> ```java
+> package de.own2mesh.own2mesh_demo;
+>
+>import android.os.Bundle;
+>
+> import com.getcapacitor.BridgeActivity;
+> import com.getcapacitor.Plugin;
+>
+> import java.util.ArrayList;
+>
+> import de.own2mesh.plugin.oklok.Own2MeshOkLokPlugin;
+>
+> public class MainActivity extends BridgeActivity {
+>  @Override
+>  public void onCreate(Bundle savedInstanceState) {
+>    super.onCreate(savedInstanceState);
+>
+>    // Initializes the Bridge
+>    this.init(savedInstanceState, new ArrayList<Class<? extends Plugin>>() {{
+>      // Additional plugins you've installed go here
+>      // Ex: add(TotallyAwesomePlugin.class);
+>      add(Own2MeshOkLokPlugin.class);
+>    }});
+>  }
+> }
+>```
+#
+
 #
 
 # Usage
