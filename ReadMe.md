@@ -20,7 +20,7 @@ Otherwise contact us via email: own2mesh@gmail.com
 * You must provide a lock address on Android.
 * This plugin has no web implementation. Test only on your phone.
 
-> Import the plugin
+> Import the plugin (Typescript)
 >```typescript
 > import {Plugins} from '@capacitor/core';
 > const {Own2MeshOkLokPlugin} = Plugins;
@@ -30,7 +30,8 @@ Otherwise contact us via email: own2mesh@gmail.com
 > Own2MeshOkLokPlugin.theMethodeYouLike();
 >```
 
-> ### (Android only) Add our installed plugin to the MainActivity
+### (Android only) 
+> ##### Add our installed plugin to the MainActivity
 >
 > File Path: *myApp/android/app/src/main/java/io/ionic/starter/MainActivity.java*
 >
