@@ -31,7 +31,7 @@ Otherwise contact us via email: own2mesh@gmail.com
 >```
 
 ### (Android only) 
-> ##### Add our installed plugin to the MainActivity
+> #### Add our installed plugin to the MainActivity
 >
 > File Path: *myApp/android/app/src/main/java/io/ionic/starter/MainActivity.java*
 >
