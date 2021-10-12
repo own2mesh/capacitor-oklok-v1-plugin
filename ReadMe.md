@@ -1,5 +1,5 @@
 # Own2Mesh - Capacitor plugin OKLOK 
-Plugin for capacitor to open locks from OKLOK
+Plugin for capacitor to open locks from OKLOK with OKLOK Protocol Version ONE
 
 You can find a demo app here: [Demo App](https://gitlab.edvsz.hs-osnabrueck.de/own2mesh/demo-ionic-own-2-mesh)
 #
