@@ -24,44 +24,61 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     
     private var peripheralName: String = ""
     
+    private var isConnecting = false
+    private var isScanning = false
+    private var timeOut = false;
+    private var timeOutTimer: Timer?
+    
     var arrayPeripheral: [CBPeripheral] = []
     var arrayPeripheralStringName:[String] = []
     
     private var name: String = "" // Bluetooth name of lock
     private var secretData: Data! // Secret key vor de/encryption
-    
     private var pw: [UInt8] = [] // specific password for lock
-    
     private var token: [UInt8]  = [0x00, 0x00, 0x00, 0x00]
     
-    private var whatYouWant: Int = 0; // switch for different stuff (open, battery_status,..) must be difer
+    
+    enum lockOptions {
+        case echo
+        case open
+        case battery_status
+        case lock_status
+        case close
+        // TODO: Add more (change lock pw and so on)
+    }
+    
+    private var whatYouWant: lockOptions = lockOptions.echo; // switch for different stuff (open, battery_status,..) must be difer
+    
+    
     
     @objc func echo(_ call: CAPPluginCall) {
-        call.resolve(["value": "Hello back from own-2-mesh plugin!"])
+        call.resolve(["value": "Echo"])
     }
     
     @objc func open(_ call: CAPPluginCall) {
         guard let nameCheck = call.options["name"] as? String else {
-            call.reject("Must provide a name")
+            call.reject("Must provide an name")
           return
         }
         self.name = nameCheck
         
         guard let secretCheck = call.options["secret"] as? [String] else {
-          call.reject("Must provide a secret")
+          call.reject("Must provide an secret")
           return
         }
+        
         let uint8Array = secretCheck.map{ UInt8($0.dropFirst(2), radix: 16)! }
         self.secretData = Data(bytes: uint8Array, count: secretCheck.count)
 
         guard let pwCheck = call.options["pw"] as? [String] else {
-          call.reject("Must provide a password (pw)")
+          call.reject("Must provide an password (pw)")
           return
         }
+        
         let uint8ArrayPW = pwCheck.map{ UInt8($0.dropFirst(2), radix: 16)! }
         self.pw = uint8ArrayPW
         
-        self.whatYouWant = 1;
+        self.whatYouWant = lockOptions.open;
         
         self.call = call
         
@@ -82,7 +99,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
         let uint8Array = secretCheck.map{ UInt8($0.dropFirst(2), radix: 16)! }
         self.secretData = Data(bytes: uint8Array, count: secretCheck.count)
         
-        self.whatYouWant = 2;
+        self.whatYouWant = lockOptions.battery_status;
         
         self.call = call
         
@@ -103,7 +120,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
         let uint8Array = secretCheck.map{ UInt8($0.dropFirst(2), radix: 16)! }
         self.secretData = Data(bytes: uint8Array, count: secretCheck.count)
         
-        self.whatYouWant = 3;
+        self.whatYouWant = lockOptions.lock_status;
         
         self.call = call
         
@@ -124,7 +141,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
         let uint8Array = secretCheck.map{ UInt8($0.dropFirst(2), radix: 16)! }
         self.secretData = Data(bytes: uint8Array, count: secretCheck.count)
         
-        self.whatYouWant = 4;
+        self.whatYouWant = lockOptions.close;
         
         self.iniCB()
         
@@ -138,6 +155,9 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
      Tutorial: https://www.freecodecamp.org/news/ultimate-how-to-bluetooth-swift-with-hardware-in-20-minutes/ <-- 20 min is a lie!
      */
     
+    /**
+            Initalize the bluetooth manager
+     */
     private func iniCB() {
         centralManager = CBCentralManager(delegate: self, queue: nil, options: nil)
     }
@@ -149,8 +169,17 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
         if central.state != .poweredOn {
             self.call.reject("Bluetooth is not powered on")
         } else {
-            print("Scanning for", self.name);
-            centralManager.scanForPeripherals(withServices: nil, options: nil)
+            if !isScanning {
+                self.isScanning = true
+                
+                print("Scanning for", self.name); // LOG
+                
+                centralManager.scanForPeripherals(withServices: nil, options: nil)
+                
+                self.timeOutTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: false) { timer in
+                    self.timeOut = true
+                }
+            }
         }
     }
     
@@ -159,22 +188,27 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     // The centralManager didDiscover event occurs when you receive scan results. We'll use this to start a connection.
     public func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
         
-        // LOGS
-//        print("\n\n__advertisementData: ")
-//        print(advertisementData);
-        // LOGS END
+        print(".")
+        
+        if timeOut {
+            self.resetAllProperties()
+            self.centralManager.stopScan()
+            self.call.reject("Time out while scanning for devices.")
+        } else
         
         // Add deiscovered peripheral name to global variable "peripheralName" need to be like that, because ios does not support MAC-Address vrom BLE devices
         if (((advertisementData as NSDictionary).value(forKey: "kCBAdvDataLocalName")) != nil){
             self.peripheralName = peripheral.name ?? ""
-//            print("\n\n__peripheralName: ", self.peripheralName) // LOGS
         }
                 
         // Check if discovered peripheralName matches the given name
         if (!(self.peripheralName).isEmpty) {
             if (self.peripheralName == self.name) {
+                
                 // LOGS
-//                print("####################################################\nAdress: " + self.name + " match with peripheralName: " + self.peripheralName + "\n####################################################\n")
+                print("--------------------------------------------") // LOG
+                print("Found device: " + self.peripheralName)
+                print("--------------------------------------------") // LOG
                 // LOGS END
                 
                 // We've found it so stop scan
@@ -195,9 +229,13 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     // Note: Device discovery is the way we determine what services and characteristics are available.
     // This is a good way to confirm what type of device we're connected to.
     public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        if peripheral == self.peripheral {
-//            print("Connected to Bluetooth Lock " + self.name) // LOG
-            peripheral.discoverServices(nil)
+        
+        if !isConnecting {
+            isConnecting = true;
+            if peripheral == self.peripheral {
+                peripheral.discoverServices(nil)
+            }
+            self.timeOutTimer?.invalidate()
         }
     }
     
@@ -222,7 +260,6 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
                 // Lock service found
                 // Now kick off discovery of characteristics
                 peripheral.discoverCharacteristics(nil, for: service)
-//                print("Discovered Services: \(services)") // LOG
                 return
             }
         }
@@ -251,19 +288,15 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
                 //Once found, subscribe to the this particular characteristic...
                 self.peripheral.setNotifyValue(true, for: characteristic)
                 self.readCharacteristic = characteristic
-                
-//                print("Read Characteristic: \(characteristic.uuid)\n") // LOG
             }
             
             // Write Characteristic ?
             if (characteristic.uuid == CBUUID.init(string: UUID_LOCK_CONFIG)) {
                 self.writeCharacteristic = characteristic
-                
-//                print("Write Characteristic: \(characteristic.uuid)\n") // LOG
             }
             
             // Discover descriptors for each characteristic
-//            peripheral.discoverDescriptors(for: characteristic) // IS missing and throws error
+            peripheral.discoverDescriptors(for: characteristic) // IS missing and throws error
 
             // Discovered Read / Write Characteristic?
             if ((self.readCharacteristic != nil) && (self.writeCharacteristic != nil))
@@ -275,7 +308,6 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
                 var encryptedData :Data?
                 do {
                     encryptedData = try aesCBCEncrypt(data: data, keyData: self.secretData) // Do encryption
-//                    print("cryptData:   \(encryptedData! as NSData)") (( LOG))
                     
                     self.peripheral.writeValue(encryptedData!, for: self.writeCharacteristic, type: .withoutResponse)
                 }
@@ -301,16 +333,6 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
             self.disconnectFromDevice()
             return
         } else {
-            // LOG
-//            print("Update value for characteristic:\n", characteristic)
-//            print("--------------------------------------------")
-//            print("Characteristic UUID: \(characteristic.uuid)")
-//            print("Characteristic isNotifying: \(characteristic.isNotifying)")
-//            print("Characteristic properties: \(characteristic.properties)")
-//            print("Characteristic descriptors: \(characteristic.descriptors)")
-//            print("Characteristic value: \(characteristic.value)")
-//            print("--------------------------------------------")
-            // LOG END
             
             if ((characteristic.uuid == CBUUID.init(string: UUID_LOCK_DATA)) ||
                 (characteristic.uuid == CBUUID.init(string: UUID_LOCK_CONFIG))) {
@@ -324,8 +346,6 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
                     
                     let fileBytes = [UInt8](decryptedData!) // Convert recieved data into UInt8 to get specific bytes
                     
-//                    print("fileBytes: \(fileBytes)")
-                    
                     // Check for correct fix􏰓ed token identifier (0x06 & 0x02) // BLE Communication-v1.pdf, Page 4
                     if (fileBytes[0] == 0x06)
                     {
@@ -338,28 +358,28 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
                             
                             var unlockData : Data?
                             switch self.whatYouWant {
-                            case 1:
+                            case .open:
                                 // Send unlock request
                                 let passwordData: [UInt8] = [0x05, 0x01, 0x06, self.pw[0], self.pw[1], self.pw[2], self.pw[3], self.pw[4], self.pw[5], token[0], token[1], token[2], token[3], 0x17, 0x3b, 0x4d] // BLE Communication-v1.pdf, Page 8
                                 unlockData = Data(bytes: passwordData, count: passwordData.count)
                                 break;
-                            case 2:
+                            case .battery_status:
                                 // Send battery_status request
                                 let passwordData: [UInt8] = [0x02, 0x01, 0x01, 0x01, token[0], token[1], token[2], token[3], 0x17, 0x3b, 0x17, 0x3b, 0x17, 0x3b, 0x17, 0x3b] // BLE Communication-v1.pdf, Page 7
                                 unlockData = Data(bytes: passwordData, count: passwordData.count)
                                 break;
-                            case 3:
+                            case .lock_status:
                                 // Send lock_status request
                                 let passwordData: [UInt8] = [0x05, 0x0E, 0x01, 0x01, token[0], token[1], token[2], token[3], 0x17, 0x3b, 0x17, 0x3b, 0x17, 0x3b, 0x17, 0x3b] // BLE Communication-v1.pdf, Page 10
                                 unlockData = Data(bytes: passwordData, count: passwordData.count)
                                 break;
-                            case 4:
+                            case .close:
                                 // Send close request
                                 let passwordData: [UInt8] = [0x05, 0x0C, 0x01, 0x01, token[0], token[1], token[2], token[3], 0x17, 0x3b, 0x17, 0x3b, 0x17, 0x3b, 0x17, 0x3b] // BLE Communication-v1.pdf, Page 10
                                 unlockData = Data(bytes: passwordData, count: passwordData.count)
                                 break;
                             default:
-                                print("Nothing chosen!")
+                                print("Nothing chosen!") // TODO: Checkout: This line should never been called
                             }
                            
 
@@ -448,7 +468,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
                                 {
                                     self.call.reject("Error: Something went wrong")
                                 }
-                                self.disconnectFromDevice();
+                                self.disconnectFromDevice()
                             }
                         }
                     }
@@ -463,14 +483,27 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     
     // Disconnect
     public func disconnectFromDevice () {
+        // LOG
+        print("--------------------------------------------")
+        print("Try to ** DISCONNECT **")
+        // LOG END
+        
         if self.peripheral != nil {
             centralManager?.cancelPeripheralConnection(self.peripheral!)
-            print("Disconnected")
         }
+        
+        print("--------------------------------------------") // LOG
     }
     
     // Disconnected
     public func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
+        self.resetAllProperties()
+    }
+    
+    /**
+     Reset all properties so the class has it's inital state
+     */
+    private func resetAllProperties() {
         self.peripheral = nil;
         self.readCharacteristic = nil;
         self.writeCharacteristic = nil;
@@ -486,6 +519,16 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
         self.pw = []
            
         self.token = [0x00, 0x00, 0x00, 0x00]
+        
+        self.isConnecting = false
+        self.isScanning = false
+        self.timeOut = false;
+        
+        // LOG
+        print("--------------------------------------------")
+        print("** DISCONNECT SUCCESFUL **")
+        print("--------------------------------------------") // LOG
+        // LOG END
     }
     
     
