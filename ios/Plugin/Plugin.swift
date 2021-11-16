@@ -418,7 +418,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
                         }
                     }
                     if (fileBytes[0] == 0x02) { // Battery status
-                        if (fileBytes[1] == 0x02) {
+                        if (fileBytes[1] == 0x01) {
                             if (fileBytes[2] == 0x01) {
                                 print("Battery \(fileBytes[3])")
                                 self.call.resolve([
