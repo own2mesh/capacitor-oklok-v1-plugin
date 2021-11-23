@@ -27,7 +27,8 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
     private var isConnecting = false
     private var isScanning = false
     private var timeOut = false;
-    private var timeOutTimer: Timer?
+    private static let timeOutTimerTime = 30.0 // sek
+    private var timeOutTimer: Timer? // Ends searching for BLE devices
     
     var arrayPeripheral: [CBPeripheral] = []
     var arrayPeripheralStringName:[String] = []
@@ -176,7 +177,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
                 
                 centralManager.scanForPeripherals(withServices: nil, options: nil)
                 
-                self.timeOutTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: false) { timer in
+                self.timeOutTimer = Timer.scheduledTimer(withTimeInterval: Own2MeshOkLokPlugin.timeOutTimerTime, repeats: false) { timer in
                     self.timeOut = true
                 }
             }
@@ -418,7 +419,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
                         }
                     }
                     if (fileBytes[0] == 0x02) { // Battery status
-                        if (fileBytes[1] == 0x01) {
+                        if (fileBytes[1] == 0x02) {
                             if (fileBytes[2] == 0x01) {
                                 print("Battery \(fileBytes[3])")
                                 self.call.resolve([
