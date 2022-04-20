@@ -332,7 +332,9 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 							case .open:
 								// Send unlock request
 								let passwordData: [UInt8] = [0x05, 0x01, 0x06, self.pw[0], self.pw[1], self.pw[2], self.pw[3], self.pw[4], self.pw[5], self.token[0], self.token[1], self.token[2], self.token[3], 0x17, 0x3B, 0x4D] // BLE Communication-v1.pdf, Page 8
+								NSLog("passwordData: " + passwordData.description)
 								unlockData = Data(bytes: passwordData, count: passwordData.count)
+								NSLog("passwordData: " + unlockData!.description)
 							case .battery_status:
 								// Send battery_status request
 								let passwordData: [UInt8] = [0x02, 0x01, 0x01, 0x01, token[0], token[1], token[2], token[3], 0x17, 0x3B, 0x17, 0x3B, 0x17, 0x3B, 0x17, 0x3B] // BLE Communication-v1.pdf, Page 7
@@ -569,33 +571,27 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 		let clearLength = size_t(dataLength + kCCBlockSizeAES128)
 		let clearDataPointer = UnsafeMutableRawPointer.allocate(byteCount: clearLength, alignment: 1)
 
+		let dataToDecryptNSData = NSData(data: data)
+		let keyToDecryptNSData = NSData(data: keyData)
 		var numberBytesDecrypted = 0
 
 		do {
-			try keyData.withUnsafeBytes { (u8Ptr: UnsafePointer<UInt8>) in
-				let keyBytes = UnsafeRawPointer(u8Ptr)
+			let cryptStatus: CCCryptorStatus = CCCrypt( // Stateless, one-shot encrypt operation
+				CCOperation(kCCDecrypt), // op: CCOperation
+				CCAlgorithm(kCCAlgorithmAES128), // alg: CCAlgorithm
+				0x0000, // options: CCOptions
+				keyToDecryptNSData.bytes, // key: the "password"
+				kCCKeySizeAES128, // keyLength: the "password" size
+				nil, // iv: Initialization Vector
+				dataToDecryptNSData.bytes, // dataIn: Data to decrypt bytes
+				dataLength, // dataInLength: Data to decrypt size
+				clearDataPointer, // dataOut: decrypted Data buffer
+				clearLength, // dataOutAvailable: decrypted Data buffer size
+				&numberBytesDecrypted // dataOutMoved: the number of bytes written
+			)
 
-				try data.withUnsafeBytes { (u8Ptr: UnsafePointer<UInt8>) in
-					let dataToDecryptBytes = UnsafeRawPointer(u8Ptr)
-
-					let cryptStatus: CCCryptorStatus = CCCrypt( // Stateless, one-shot encrypt operation
-						CCOperation(kCCDecrypt), // op: CCOperation
-						CCAlgorithm(kCCAlgorithmAES128), // alg: CCAlgorithm
-						0x0000, // options: CCOptions
-						keyBytes, // key: the "password"
-						kCCKeySizeAES128, // keyLength: the "password" size
-						nil, // iv: Initialization Vector
-						dataToDecryptBytes, // dataIn: Data to decrypt bytes
-						dataLength, // dataInLength: Data to decrypt size
-						clearDataPointer, // dataOut: decrypted Data buffer
-						clearLength, // dataOutAvailable: decrypted Data buffer size
-						&numberBytesDecrypted // dataOutMoved: the number of bytes written
-					)
-
-					guard cryptStatus == CCCryptorStatus(kCCSuccess) else {
-						throw AESError.CryptorError(("Decryption status is \(cryptStatus)", -1))
-					}
-				}
+			guard cryptStatus == CCCryptorStatus(kCCSuccess) else {
+				throw AESError.CryptorError(("Decryption status is \(cryptStatus)", -1))
 			}
 		} catch {
 			throw AESError.CryptorError(("Decryptin faild", -1))
