@@ -57,7 +57,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 			call.reject("Must provide an name")
 			return
 		}
-		name = nameCheck
+		self.name = nameCheck
 
 		guard let secretCheck = call.options["secret"] as? [String] else {
 			call.reject("Must provide an secret")
@@ -65,7 +65,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 		}
 
 		let uint8Array = secretCheck.map { UInt8($0.dropFirst(2), radix: 16)! }
-		secretData = Data(bytes: uint8Array, count: secretCheck.count)
+		self.secretData = Data(bytes: uint8Array, count: secretCheck.count)
 
 		guard let pwCheck = call.options["pw"] as? [String] else {
 			call.reject("Must provide an password (pw)")
@@ -73,13 +73,13 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 		}
 
 		let uint8ArrayPW = pwCheck.map { UInt8($0.dropFirst(2), radix: 16)! }
-		pw = uint8ArrayPW
+		self.pw = uint8ArrayPW
 
-		whatYouWant = lockOptions.open
+		self.whatYouWant = lockOptions.open
 
 		self.call = call
 
-		iniCB()
+		self.iniCB()
 	}
 
 	@objc func battery_status(_ call: CAPPluginCall) {
@@ -87,20 +87,20 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 			call.reject("Must provide an name")
 			return
 		}
-		name = nameCheck
+		self.name = nameCheck
 
 		guard let secretCheck = call.options["secret"] as? [String] else {
 			call.reject("Must provide an secret")
 			return
 		}
 		let uint8Array = secretCheck.map { UInt8($0.dropFirst(2), radix: 16)! }
-		secretData = Data(bytes: uint8Array, count: secretCheck.count)
+		self.secretData = Data(bytes: uint8Array, count: secretCheck.count)
 
-		whatYouWant = lockOptions.battery_status
+		self.whatYouWant = lockOptions.battery_status
 
 		self.call = call
 
-		iniCB()
+		self.iniCB()
 	}
 
 	@objc func lock_status(_ call: CAPPluginCall) {
@@ -108,20 +108,20 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 			call.reject("Must provide an name")
 			return
 		}
-		name = nameCheck
+		self.name = nameCheck
 
 		guard let secretCheck = call.options["secret"] as? [String] else {
 			call.reject("Must provide an secret")
 			return
 		}
 		let uint8Array = secretCheck.map { UInt8($0.dropFirst(2), radix: 16)! }
-		secretData = Data(bytes: uint8Array, count: secretCheck.count)
+		self.secretData = Data(bytes: uint8Array, count: secretCheck.count)
 
-		whatYouWant = lockOptions.lock_status
+		self.whatYouWant = lockOptions.lock_status
 
 		self.call = call
 
-		iniCB()
+		self.iniCB()
 	}
 
 	@objc func close(_ call: CAPPluginCall) {
@@ -129,18 +129,18 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 			call.reject("Must provide an name")
 			return
 		}
-		name = nameCheck
+		self.name = nameCheck
 
 		guard let secretCheck = call.options["secret"] as? [String] else {
 			call.reject("Must provide an secret")
 			return
 		}
 		let uint8Array = secretCheck.map { UInt8($0.dropFirst(2), radix: 16)! }
-		secretData = Data(bytes: uint8Array, count: secretCheck.count)
+		self.secretData = Data(bytes: uint8Array, count: secretCheck.count)
 
-		whatYouWant = lockOptions.close
+		self.whatYouWant = lockOptions.close
 
-		iniCB()
+		self.iniCB()
 
 		self.call = call
 	}
@@ -155,7 +155,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 	        Initalize the bluetooth manager
 	 */
 	private func iniCB() {
-		centralManager = CBCentralManager(delegate: self, queue: nil, options: nil)
+		self.centralManager = CBCentralManager(delegate: self, queue: nil, options: nil)
 	}
 
 	// If we're powered on, start scanning
@@ -163,16 +163,16 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 	// It will fire when an app first starts so you know the state of Bluetooth. We also start scanning here.
 	public func centralManagerDidUpdateState(_ central: CBCentralManager) {
 		if central.state != .poweredOn {
-			call.reject("Bluetooth is not powered on")
+			self.call.reject("Bluetooth is not powered on")
 		} else {
-			if !isScanning {
-				isScanning = true
+			if !self.isScanning {
+				self.isScanning = true
 
-				print("Scanning for", name) // LOG
+				print("Scanning for", self.name) // LOG
 
-				centralManager.scanForPeripherals(withServices: nil, options: nil)
+				self.centralManager.scanForPeripherals(withServices: nil, options: nil)
 
-				timeOutTimer = Timer.scheduledTimer(withTimeInterval: Own2MeshOkLokPlugin.timeOutTimerTime, repeats: false) { _ in
+				self.timeOutTimer = Timer.scheduledTimer(withTimeInterval: Own2MeshOkLokPlugin.timeOutTimerTime, repeats: false) { _ in
 					self.timeOut = true
 				}
 			}
@@ -184,35 +184,35 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 	public func centralManager(_: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi _: NSNumber) {
 		print(".")
 
-		if timeOut {
-			resetAllProperties()
-			centralManager.stopScan()
-			call.reject("Time out while scanning for devices.")
+		if self.timeOut {
+			self.resetAllProperties()
+			self.centralManager.stopScan()
+			self.call.reject("Time out while scanning for devices.")
 		} else
 
 		// Add deiscovered peripheral name to global variable "peripheralName" need to be like that, because ios does not support MAC-Address vrom BLE devices
 		if ((advertisementData as NSDictionary).value(forKey: "kCBAdvDataLocalName")) != nil {
-			peripheralName = peripheral.name ?? ""
+			self.peripheralName = peripheral.name ?? ""
 		}
 
 		// Check if discovered peripheralName matches the given name
-		if !peripheralName.isEmpty {
-			if peripheralName == name {
+		if !(self.peripheralName).isEmpty {
+			if self.peripheralName == self.name {
 				// LOGS
 				print("--------------------------------------------") // LOG
-				print("Found device: " + peripheralName)
+				print("Found device: " + self.peripheralName)
 				print("--------------------------------------------") // LOG
 				// LOGS END
 
 				// We've found it so stop scan
-				centralManager.stopScan()
+				self.centralManager.stopScan()
 
 				// Copy the peripheral instance
 				self.peripheral = peripheral
 				self.peripheral.delegate = self
 
 				// Connect!
-				centralManager.connect(self.peripheral, options: nil)
+				self.centralManager.connect(self.peripheral, options: nil)
 			}
 		}
 	}
@@ -222,12 +222,12 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 	// Note: Device discovery is the way we determine what services and characteristics are available.
 	// This is a good way to confirm what type of device we're connected to.
 	public func centralManager(_: CBCentralManager, didConnect peripheral: CBPeripheral) {
-		if !isConnecting {
-			isConnecting = true
+		if !self.isConnecting {
+			self.isConnecting = true
 			if peripheral == self.peripheral {
 				peripheral.discoverServices(nil)
 			}
-			timeOutTimer?.invalidate()
+			self.timeOutTimer?.invalidate()
 		}
 	}
 
@@ -236,14 +236,14 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 	// Notice that we've switched from centralManager to peripheral now that we're connected. We'll start the characteristic discovery here. We'll be using the service UUID as the target.
 	public func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
 		if error != nil {
-			call.reject("Error discovering services: \(error!.localizedDescription)")
-			disconnectFromDevice()
+			self.call.reject("Error discovering services: \(error!.localizedDescription)")
+			self.disconnectFromDevice()
 			return
 		}
 
 		guard let services = peripheral.services else {
-			call.reject("No service discovered!")
-			disconnectFromDevice()
+			self.call.reject("No service discovered!")
+			self.disconnectFromDevice()
 			return
 		}
 
@@ -262,8 +262,8 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 	// This is the last step in the chain of doing a full device discovery. It's hairy but it only has to be done once during the connection phase!
 	public func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
 		if error != nil {
-			call.reject("Error discovering services: \(error!.localizedDescription)")
-			disconnectFromDevice()
+			self.call.reject("Error discovering services: \(error!.localizedDescription)")
+			self.disconnectFromDevice()
 			return
 		}
 
@@ -278,28 +278,28 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 			if characteristic.uuid == CBUUID(string: UUID_LOCK_DATA) {
 				// Once found, subscribe to the this particular characteristic...
 				self.peripheral.setNotifyValue(true, for: characteristic)
-				readCharacteristic = characteristic
+				self.readCharacteristic = characteristic
 			}
 
 			// Write Characteristic ?
 			if characteristic.uuid == CBUUID(string: UUID_LOCK_CONFIG) {
-				writeCharacteristic = characteristic
+				self.writeCharacteristic = characteristic
 			}
 
 			// Discover descriptors for each characteristic
 			peripheral.discoverDescriptors(for: characteristic) // IS missing and throws error
 
 			// Discovered Read / Write Characteristic?
-			if readCharacteristic != nil, writeCharacteristic != nil {
+			if self.readCharacteristic != nil, self.writeCharacteristic != nil {
 				// Send token requst
 				let valData: [UInt8] = [0x06, 0x01, 0x01, 0x01, 0x37, 0x62, 0x55, 0x6C, 0x68, 0x73, 0x1D, 0x6D, 0x7E, 0x17, 0x3B, 0x4D] // BLE Communication-v1.pdf, Page 4
 				let data: Data = .init(bytes: valData, count: valData.count)
 
 				var encryptedData: Data?
 				do {
-					encryptedData = try aesCBCEncrypt(data: data, keyData: secretData) // Do encryption
+					encryptedData = try self.aesCBCEncrypt(data: data, keyData: self.secretData) // Do encryption
 
-					self.peripheral.writeValue(encryptedData!, for: writeCharacteristic, type: .withoutResponse)
+					self.peripheral.writeValue(encryptedData!, for: self.writeCharacteristic, type: .withoutResponse)
 				} catch let status {
 					self.call.reject("Error aesCBCEncrypt: \(status)")
 					self.disconnectFromDevice()
@@ -310,16 +310,16 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 
 	public func peripheral(_: CBPeripheral, didUpdateNotificationStateFor _: CBCharacteristic, error: Error?) {
 		if error != nil {
-			call.reject("Error update notification state for characteristic: \(error!.localizedDescription)")
-			disconnectFromDevice()
+			self.call.reject("Error update notification state for characteristic: \(error!.localizedDescription)")
+			self.disconnectFromDevice()
 			return
 		}
 	}
 
 	public func peripheral(_: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
 		if error != nil {
-			call.reject("Error update value for characteristic: \(error!.localizedDescription)")
-			disconnectFromDevice()
+			self.call.reject("Error update value for characteristic: \(error!.localizedDescription)")
+			self.disconnectFromDevice()
 			return
 		} else {
 			if (characteristic.uuid == CBUUID(string: UUID_LOCK_DATA)) ||
@@ -330,23 +330,23 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 
 				var decryptedData: Data?
 				do {
-					decryptedData = try aesCBCDecrypt(data: dataBytes, keyData: secretData) // Do decryption
+					decryptedData = try self.aesCBCDecrypt(data: dataBytes, keyData: self.secretData) // Do decryption
 
 					let fileBytes = [UInt8](decryptedData!) // Convert recieved data into UInt8 to get specific bytes
 
 					// Check for correct fix􏰓ed token identifier (0x06 & 0x02) // BLE Communication-v1.pdf, Page 4
 					if fileBytes[0] == 0x06 {
 						if fileBytes[1] == 0x02 {
-							token[0] = fileBytes[3]
-							token[1] = fileBytes[4]
-							token[2] = fileBytes[5]
-							token[3] = fileBytes[6]
+							self.token[0] = fileBytes[3]
+							self.token[1] = fileBytes[4]
+							self.token[2] = fileBytes[5]
+							self.token[3] = fileBytes[6]
 
 							var unlockData: Data?
-							switch whatYouWant {
+							switch self.whatYouWant {
 							case .open:
 								// Send unlock request
-								let passwordData: [UInt8] = [0x05, 0x01, 0x06, pw[0], pw[1], pw[2], pw[3], pw[4], pw[5], token[0], token[1], token[2], token[3], 0x17, 0x3B, 0x4D] // BLE Communication-v1.pdf, Page 8
+								let passwordData: [UInt8] = [0x05, 0x01, 0x06, self.pw[0], self.pw[1], self.pw[2], self.pw[3], self.pw[4], self.pw[5], self.token[0], self.token[1], self.token[2], self.token[3], 0x17, 0x3B, 0x4D] // BLE Communication-v1.pdf, Page 8
 								unlockData = Data(bytes: passwordData, count: passwordData.count)
 							case .battery_status:
 								// Send battery_status request
@@ -366,8 +366,8 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 
 							var encryptedData: Data?
 							do {
-								encryptedData = try aesCBCEncrypt(data: unlockData!, keyData: secretData)
-								peripheral.writeValue(encryptedData!, for: writeCharacteristic, type: .withoutResponse)
+								encryptedData = try self.aesCBCEncrypt(data: unlockData!, keyData: self.secretData)
+								self.peripheral.writeValue(encryptedData!, for: self.writeCharacteristic, type: .withoutResponse)
 							} catch let status {
 								self.call.reject("Error aesCBCEncrypt: \(status)")
 								self.disconnectFromDevice()
@@ -380,15 +380,15 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 							if fileBytes[2] == 0x01 {
 								// Check if successful opend lock
 								if fileBytes[3] == 0x0 {
-									call.resolve([
+									self.call.resolve([
 										"opened": true,
 									])
 								} else {
-									call.resolve([
+									self.call.resolve([
 										"opened": false,
 									])
 								}
-								disconnectFromDevice()
+								self.disconnectFromDevice()
 							}
 						}
 					}
@@ -396,10 +396,10 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 						if fileBytes[1] == 0x02 {
 							if fileBytes[2] == 0x01 {
 								print("Battery \(fileBytes[3])")
-								call.resolve([
+								self.call.resolve([
 									"percentage": fileBytes[3],
 								])
-								disconnectFromDevice()
+								self.disconnectFromDevice()
 							}
 						}
 					}
@@ -408,17 +408,17 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 							if fileBytes[2] == 0x01 {
 								// Check if successful opend lock
 								if fileBytes[3] == 0x00 {
-									call.resolve([
+									self.call.resolve([
 										"locked": false,
 									])
 								} else if fileBytes[3] == 0x01 {
-									call.resolve([
+									self.call.resolve([
 										"locked": true,
 									])
 								} else {
-									call.reject("Error: Something went wrong")
+									self.call.reject("Error: Something went wrong")
 								}
-								disconnectFromDevice()
+								self.disconnectFromDevice()
 							}
 						}
 					}
@@ -427,15 +427,15 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 							if fileBytes[2] == 0x01 {
 								// Check if successful opend lock
 								if fileBytes[3] == 0x00 {
-									call.resolve([
+									self.call.resolve([
 										"closed": true,
 									])
 								} else if fileBytes[3] == 0x01 {
-									call.reject("Lock failed to lock")
+									self.call.reject("Lock failed to lock")
 								} else {
-									call.reject("Error: Something went wrong")
+									self.call.reject("Error: Something went wrong")
 								}
-								disconnectFromDevice()
+								self.disconnectFromDevice()
 							}
 						}
 					}
@@ -454,8 +454,8 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 		print("Try to ** DISCONNECT **")
 		// LOG END
 
-		if peripheral != nil {
-			centralManager?.cancelPeripheralConnection(peripheral!)
+		if self.peripheral != nil {
+			self.centralManager?.cancelPeripheralConnection(self.peripheral!)
 		}
 
 		print("--------------------------------------------") // LOG
@@ -463,32 +463,32 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 
 	// Disconnected
 	public func centralManager(_: CBCentralManager, didDisconnectPeripheral _: CBPeripheral, error _: Error?) {
-		resetAllProperties()
+		self.resetAllProperties()
 	}
 
 	/**
 	 Reset all properties so the class has it's inital state
 	 */
 	private func resetAllProperties() {
-		peripheral = nil
-		readCharacteristic = nil
-		writeCharacteristic = nil
+		self.peripheral = nil
+		self.readCharacteristic = nil
+		self.writeCharacteristic = nil
 
-		peripheralName = ""
+		self.peripheralName = ""
 
-		arrayPeripheral = []
-		arrayPeripheralStringName = []
+		self.arrayPeripheral = []
+		self.arrayPeripheralStringName = []
 
-		name = ""
-		secretData = nil
+		self.name = ""
+		self.secretData = nil
 
-		pw = []
+		self.pw = []
 
-		token = [0x00, 0x00, 0x00, 0x00]
+		self.token = [0x00, 0x00, 0x00, 0x00]
 
-		isConnecting = false
-		isScanning = false
-		timeOut = false
+		self.isConnecting = false
+		self.isScanning = false
+		self.timeOut = false
 
 		// LOG
 		print("--------------------------------------------")
@@ -514,8 +514,8 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 
 		let validKeyLengths = [kCCKeySizeAES128, kCCKeySizeAES192, kCCKeySizeAES256]
 		if validKeyLengths.contains(keyLength) == false {
-			call.reject("Invalid key length.\nYour key length \(keyLength).\nSchould be \(kCCKeySizeAES128), \(kCCKeySizeAES192), \(kCCKeySizeAES256)")
-			disconnectFromDevice()
+			self.call.reject("Invalid key length.\nYour key length \(keyLength).\nSchould be \(kCCKeySizeAES128), \(kCCKeySizeAES192), \(kCCKeySizeAES256)")
+			self.disconnectFromDevice()
 		}
 
 		let dataLength = data.count
@@ -576,8 +576,8 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 
 		let validKeyLengths = [kCCKeySizeAES128, kCCKeySizeAES192, kCCKeySizeAES256]
 		if validKeyLengths.contains(keyLength) == false {
-			call.reject("Invalid key length.\nYour key length \(keyLength).\nSchould be \(kCCKeySizeAES128), \(kCCKeySizeAES192), \(kCCKeySizeAES256)")
-			disconnectFromDevice()
+			self.call.reject("Invalid key length.\nYour key length \(keyLength).\nSchould be \(kCCKeySizeAES128), \(kCCKeySizeAES192), \(kCCKeySizeAES256)")
+			self.disconnectFromDevice()
 		}
 
 		let dataLength = data.count
