@@ -74,11 +74,8 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 
 		let uint8ArrayPW = pwCheck.map { UInt8($0.dropFirst(2), radix: 16)! }
 		self.pw = uint8ArrayPW
-
 		self.whatYouWant = lockOptions.open
-
 		self.call = call
-
 		self.iniCB()
 	}
 
@@ -95,11 +92,8 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 		}
 		let uint8Array = secretCheck.map { UInt8($0.dropFirst(2), radix: 16)! }
 		self.secretData = Data(bytes: uint8Array, count: secretCheck.count)
-
 		self.whatYouWant = lockOptions.battery_status
-
 		self.call = call
-
 		self.iniCB()
 	}
 
@@ -116,11 +110,8 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 		}
 		let uint8Array = secretCheck.map { UInt8($0.dropFirst(2), radix: 16)! }
 		self.secretData = Data(bytes: uint8Array, count: secretCheck.count)
-
 		self.whatYouWant = lockOptions.lock_status
-
 		self.call = call
-
 		self.iniCB()
 	}
 
@@ -137,11 +128,8 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 		}
 		let uint8Array = secretCheck.map { UInt8($0.dropFirst(2), radix: 16)! }
 		self.secretData = Data(bytes: uint8Array, count: secretCheck.count)
-
 		self.whatYouWant = lockOptions.close
-
 		self.iniCB()
-
 		self.call = call
 	}
 
@@ -167,11 +155,8 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 		} else {
 			if !self.isScanning {
 				self.isScanning = true
-
 				print("Scanning for", self.name) // LOG
-
 				self.centralManager.scanForPeripherals(withServices: nil, options: nil)
-
 				self.timeOutTimer = Timer.scheduledTimer(withTimeInterval: Own2MeshOkLokPlugin.timeOutTimerTime, repeats: false) { _ in
 					self.timeOut = true
 				}
