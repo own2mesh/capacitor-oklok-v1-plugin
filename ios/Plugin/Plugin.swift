@@ -282,11 +282,11 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 
 				var encryptedData: Data?
 				do {
-					encryptedData = try self.aesCBCEncrypt(data: data, keyData: self.secretData) // Do encryption
+					encryptedData = try self.aesECBEncrypt(data: data, keyData: self.secretData) // Do encryption
 
 					self.peripheral.writeValue(encryptedData!, for: self.writeCharacteristic, type: .withoutResponse)
 				} catch let status {
-					self.call.reject("Error aesCBCEncrypt: \(status)")
+					self.call.reject("Error aesECBEncrypt: \(status)")
 					self.disconnectFromDevice()
 				}
 			}
@@ -311,11 +311,11 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 				(characteristic.uuid == CBUUID(string: UUID_LOCK_CONFIG))
 			{
 				let data: NSData = characteristic.value! as NSData // Communication frames returned after token request
-				let dataBytes: Data = .init(referencing: data) // aesCBCDecrypt needs type Data. But secret need to be stored as NSData, so referencing works just fine..
+				let dataBytes: Data = .init(referencing: data) // aesECBDecrypt needs type Data. But secret need to be stored as NSData, so referencing works just fine..
 
 				var decryptedData: Data?
 				do {
-					decryptedData = try self.aesCBCDecrypt(data: dataBytes, keyData: self.secretData) // Do decryption
+					decryptedData = try self.aesECBDecrypt(data: dataBytes, keyData: self.secretData) // Do decryption
 
 					let fileBytes = [UInt8](decryptedData!) // Convert recieved data into UInt8 to get specific bytes
 
@@ -351,10 +351,10 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 
 							var encryptedData: Data?
 							do {
-								encryptedData = try self.aesCBCEncrypt(data: unlockData!, keyData: self.secretData)
+								encryptedData = try self.aesECBEncrypt(data: unlockData!, keyData: self.secretData)
 								self.peripheral.writeValue(encryptedData!, for: self.writeCharacteristic, type: .withoutResponse)
 							} catch let status {
-								self.call.reject("Error aesCBCEncrypt: \(status)")
+								self.call.reject("Error aesECBEncrypt: \(status)")
 								self.disconnectFromDevice()
 							}
 						}
@@ -425,7 +425,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 						}
 					}
 				} catch let status {
-					self.call.reject("Error aesCBCDecrypt: \(status)")
+					self.call.reject("Error aesECBDecrypt: \(status)")
 					self.disconnectFromDevice()
 				}
 			}
@@ -494,7 +494,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 	}
 
 	// The iv is prefixed to the encrypted data
-	func aesCBCEncrypt(data: Data, keyData: Data) throws -> Data {
+	func aesECBEncrypt(data: Data, keyData: Data) throws -> Data {
 		let keyLength = keyData.count
 
 		let validKeyLengths = [kCCKeySizeAES128, kCCKeySizeAES192, kCCKeySizeAES256]
@@ -556,7 +556,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 	}
 
 	// The iv is prefixed to the encrypted data
-	func aesCBCDecrypt(data: Data, keyData: Data) throws -> Data? {
+	func aesECBDecrypt(data: Data, keyData: Data) throws -> Data? {
 		let keyLength = keyData.count
 
 		let validKeyLengths = [kCCKeySizeAES128, kCCKeySizeAES192, kCCKeySizeAES256]
