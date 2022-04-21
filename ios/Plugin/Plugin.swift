@@ -332,9 +332,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 							case .open:
 								// Send unlock request
 								let passwordData: [UInt8] = [0x05, 0x01, 0x06, self.pw[0], self.pw[1], self.pw[2], self.pw[3], self.pw[4], self.pw[5], self.token[0], self.token[1], self.token[2], self.token[3], 0x17, 0x3B, 0x4D] // BLE Communication-v1.pdf, Page 8
-								NSLog("passwordData: " + passwordData.description)
 								unlockData = Data(bytes: passwordData, count: passwordData.count)
-								NSLog("passwordData: " + unlockData!.description)
 							case .battery_status:
 								// Send battery_status request
 								let passwordData: [UInt8] = [0x02, 0x01, 0x01, 0x01, token[0], token[1], token[2], token[3], 0x17, 0x3B, 0x17, 0x3B, 0x17, 0x3B, 0x17, 0x3B] // BLE Communication-v1.pdf, Page 7
@@ -514,6 +512,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 		let keyToDecryptNSData = NSData(data: keyData)
 
 		var numBytesEncrypted = 0
+		var initializationVector = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 
 		do {
 			let cryptStatus: CCCryptorStatus = CCCrypt(
@@ -522,7 +521,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 				0x0000, // options: CCOptions
 				keyToDecryptNSData.bytes, // key: the "password"
 				kCCKeySizeAES128, // keyLength: the "password" size
-				[0x0], // iv: Initialization Vector
+				&initializationVector, // iv: Initialization Vector
 				dataToDecryptNSData.bytes, // dataIn: Data to encrypt bytes
 				dataLength, // dataInLength: Data to encrypt size
 				encryptDataPointer, // dataOut: encrypted Data buffer
