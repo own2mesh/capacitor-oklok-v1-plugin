@@ -282,11 +282,11 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 
 				var encryptedData: Data?
 				do {
-					encryptedData = try self.aesCBCEncrypt(data: data, keyData: self.secretData) // Do encryption
+					encryptedData = try self.aesECBEncrypt(data: data, keyData: self.secretData) // Do encryption
 
 					self.peripheral.writeValue(encryptedData!, for: self.writeCharacteristic, type: .withoutResponse)
 				} catch let status {
-					self.call.reject("Error aesCBCEncrypt: \(status)")
+					self.call.reject("Error aesECBEncrypt: \(status)")
 					self.disconnectFromDevice()
 				}
 			}
@@ -311,11 +311,11 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 				(characteristic.uuid == CBUUID(string: UUID_LOCK_CONFIG))
 			{
 				let data: NSData = characteristic.value! as NSData // Communication frames returned after token request
-				let dataBytes: Data = .init(referencing: data) // aesCBCDecrypt needs type Data. But secret need to be stored as NSData, so referencing works just fine..
+				let dataBytes: Data = .init(referencing: data) // aesECBDecrypt needs type Data. But secret need to be stored as NSData, so referencing works just fine..
 
 				var decryptedData: Data?
 				do {
-					decryptedData = try self.aesCBCDecrypt(data: dataBytes, keyData: self.secretData) // Do decryption
+					decryptedData = try self.aesECBDecrypt(data: dataBytes, keyData: self.secretData) // Do decryption
 
 					let fileBytes = [UInt8](decryptedData!) // Convert recieved data into UInt8 to get specific bytes
 
@@ -331,19 +331,19 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 							switch self.whatYouWant {
 							case .open:
 								// Send unlock request
-								let passwordData: [UInt8] = [0x05, 0x01, 0x06, self.pw[0], self.pw[1], self.pw[2], self.pw[3], self.pw[4], self.pw[5], self.token[0], self.token[1], self.token[2], self.token[3], 0x17, 0x3B, 0x4D] // BLE Communication-v1.pdf, Page 8
+								let passwordData: [UInt8] = [0x05, 0x01, 0x06, self.pw[0], self.pw[1], self.pw[2], self.pw[3], self.pw[4], self.pw[5], self.token[0], self.token[1], self.token[2], self.token[3], 0x0, 0x0, 0x0] // BLE Communication-v1.pdf, Page 8
 								unlockData = Data(bytes: passwordData, count: passwordData.count)
 							case .battery_status:
 								// Send battery_status request
-								let passwordData: [UInt8] = [0x02, 0x01, 0x01, 0x01, token[0], token[1], token[2], token[3], 0x17, 0x3B, 0x17, 0x3B, 0x17, 0x3B, 0x17, 0x3B] // BLE Communication-v1.pdf, Page 7
+								let passwordData: [UInt8] = [0x02, 0x01, 0x01, 0x01, token[0], token[1], token[2], token[3], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0] // BLE Communication-v1.pdf, Page 7
 								unlockData = Data(bytes: passwordData, count: passwordData.count)
 							case .lock_status:
 								// Send lock_status request
-								let passwordData: [UInt8] = [0x05, 0x0E, 0x01, 0x01, token[0], token[1], token[2], token[3], 0x17, 0x3B, 0x17, 0x3B, 0x17, 0x3B, 0x17, 0x3B] // BLE Communication-v1.pdf, Page 10
+								let passwordData: [UInt8] = [0x05, 0x0E, 0x01, 0x01, token[0], token[1], token[2], token[3], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0] // BLE Communication-v1.pdf, Page 10
 								unlockData = Data(bytes: passwordData, count: passwordData.count)
 							case .close:
 								// Send close request
-								let passwordData: [UInt8] = [0x05, 0x0C, 0x01, 0x01, token[0], token[1], token[2], token[3], 0x17, 0x3B, 0x17, 0x3B, 0x17, 0x3B, 0x17, 0x3B] // BLE Communication-v1.pdf, Page 10
+								let passwordData: [UInt8] = [0x05, 0x0C, 0x01, 0x01, token[0], token[1], token[2], token[3], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0] // BLE Communication-v1.pdf, Page 10
 								unlockData = Data(bytes: passwordData, count: passwordData.count)
 							default:
 								print("Nothing chosen!") // TODO: Checkout: This line should never been called
@@ -351,10 +351,10 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 
 							var encryptedData: Data?
 							do {
-								encryptedData = try self.aesCBCEncrypt(data: unlockData!, keyData: self.secretData)
+								encryptedData = try self.aesECBEncrypt(data: unlockData!, keyData: self.secretData)
 								self.peripheral.writeValue(encryptedData!, for: self.writeCharacteristic, type: .withoutResponse)
 							} catch let status {
-								self.call.reject("Error aesCBCEncrypt: \(status)")
+								self.call.reject("Error aesECBEncrypt: \(status)")
 								self.disconnectFromDevice()
 							}
 						}
@@ -425,7 +425,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 						}
 					}
 				} catch let status {
-					self.call.reject("Error aesCBCDecrypt: \(status)")
+					self.call.reject("Error aesECBDecrypt: \(status)")
 					self.disconnectFromDevice()
 				}
 			}
@@ -494,7 +494,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 	}
 
 	// The iv is prefixed to the encrypted data
-	func aesCBCEncrypt(data: Data, keyData: Data) throws -> Data {
+	func aesECBEncrypt(data: Data, keyData: Data) throws -> Data {
 		let keyLength = keyData.count
 
 		let validKeyLengths = [kCCKeySizeAES128, kCCKeySizeAES192, kCCKeySizeAES256]
@@ -517,10 +517,10 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 			let cryptStatus: CCCryptorStatus = CCCrypt(
 				CCOperation(kCCEncrypt), // op: CCOperation
 				CCAlgorithm(kCCAlgorithmAES128), // alg: CCAlgorithm
-				0x0000, // options: CCOptions
+				CCOptions(kCCOptionECBMode), // options: CCOptions
 				keyToDecryptNSData.bytes, // key: the "password"
 				kCCKeySizeAES128, // keyLength: the "password" size
-				[0x0], // iv: Initialization Vector
+				nil, // iv: Initialization Vector (ignored when in aes ecb mode (kCCOptionECBMode))
 				dataToDecryptNSData.bytes, // dataIn: Data to encrypt bytes
 				dataLength, // dataInLength: Data to encrypt size
 				encryptDataPointer, // dataOut: encrypted Data buffer
@@ -556,7 +556,7 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 	}
 
 	// The iv is prefixed to the encrypted data
-	func aesCBCDecrypt(data: Data, keyData: Data) throws -> Data? {
+	func aesECBDecrypt(data: Data, keyData: Data) throws -> Data? {
 		let keyLength = keyData.count
 
 		let validKeyLengths = [kCCKeySizeAES128, kCCKeySizeAES192, kCCKeySizeAES256]
@@ -569,33 +569,27 @@ public class Own2MeshOkLokPlugin: CAPPlugin, CBPeripheralDelegate, CBCentralMana
 		let clearLength = size_t(dataLength + kCCBlockSizeAES128)
 		let clearDataPointer = UnsafeMutableRawPointer.allocate(byteCount: clearLength, alignment: 1)
 
+		let dataToDecryptNSData = NSData(data: data)
+		let keyToDecryptNSData = NSData(data: keyData)
 		var numberBytesDecrypted = 0
 
 		do {
-			try keyData.withUnsafeBytes { (u8Ptr: UnsafePointer<UInt8>) in
-				let keyBytes = UnsafeRawPointer(u8Ptr)
+			let cryptStatus: CCCryptorStatus = CCCrypt( // Stateless, one-shot encrypt operation
+				CCOperation(kCCDecrypt), // op: CCOperation
+				CCAlgorithm(kCCAlgorithmAES128), // alg: CCAlgorithm
+				CCOptions(kCCOptionECBMode), // options: CCOptions
+				keyToDecryptNSData.bytes, // key: the "password"
+				kCCKeySizeAES128, // keyLength: the "password" size
+				nil, // iv: Initialization Vector (ignored when in mode kCCOptionECBMode)
+				dataToDecryptNSData.bytes, // dataIn: Data to decrypt bytes
+				dataLength, // dataInLength: Data to decrypt size
+				clearDataPointer, // dataOut: decrypted Data buffer
+				clearLength, // dataOutAvailable: decrypted Data buffer size
+				&numberBytesDecrypted // dataOutMoved: the number of bytes written
+			)
 
-				try data.withUnsafeBytes { (u8Ptr: UnsafePointer<UInt8>) in
-					let dataToDecryptBytes = UnsafeRawPointer(u8Ptr)
-
-					let cryptStatus: CCCryptorStatus = CCCrypt( // Stateless, one-shot encrypt operation
-						CCOperation(kCCDecrypt), // op: CCOperation
-						CCAlgorithm(kCCAlgorithmAES128), // alg: CCAlgorithm
-						0x0000, // options: CCOptions
-						keyBytes, // key: the "password"
-						kCCKeySizeAES128, // keyLength: the "password" size
-						nil, // iv: Initialization Vector
-						dataToDecryptBytes, // dataIn: Data to decrypt bytes
-						dataLength, // dataInLength: Data to decrypt size
-						clearDataPointer, // dataOut: decrypted Data buffer
-						clearLength, // dataOutAvailable: decrypted Data buffer size
-						&numberBytesDecrypted // dataOutMoved: the number of bytes written
-					)
-
-					guard cryptStatus == CCCryptorStatus(kCCSuccess) else {
-						throw AESError.CryptorError(("Decryption status is \(cryptStatus)", -1))
-					}
-				}
+			guard cryptStatus == CCCryptorStatus(kCCSuccess) else {
+				throw AESError.CryptorError(("Decryption status is \(cryptStatus)", -1))
 			}
 		} catch {
 			throw AESError.CryptorError(("Decryptin faild", -1))
