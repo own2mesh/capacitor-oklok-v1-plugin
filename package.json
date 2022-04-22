@@ -1,6 +1,6 @@
 {
   "name": "own2mesh-capacitor-plugin-oklok",
-  "version": "0.1.6",
+  "version": "1.2.0",
   "description": "An awesome plugin!",
   "main": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
